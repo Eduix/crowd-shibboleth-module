@@ -159,7 +159,7 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
 
         if (userDetails == null) {
             log.debug("No user " + username + " found. Creating");
-            String firstName = getFirstNameFromGivenName(request.getHeader(config.getFirstNameHeader()));
+            String firstName = request.getHeader(config.getFirstNameHeader());
             String lastName = request.getHeader(config.getLastNameHeader());
             String email = request.getHeader(config.getEmailHeader());
 
@@ -415,7 +415,7 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
         try {
             User foundUser = directoryManager.findUserByName(directory.getId(), username);
             UserTemplate mutableUser = new UserTemplate(foundUser);
-            String firstName = getFirstNameFromGivenName(request.getHeader(config.getFirstNameHeader()));
+            String firstName = request.getHeader(config.getFirstNameHeader());
             String lastName = request.getHeader(config.getLastNameHeader());
             String email = request.getHeader(config.getEmailHeader());
 
@@ -583,14 +583,6 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
         }
     }
     
-    private String getFirstNameFromGivenName(String name) {
-      String[] split = StringUtils.split(name);
-      if(split == null || split.length==0) {
-         return name;
-      }
-      return split[0];      
-    }
-
     public void setHttpAuthenticator(HttpAuthenticator httpAuthenticator) {
         this.httpAuthenticator = httpAuthenticator;
     }
