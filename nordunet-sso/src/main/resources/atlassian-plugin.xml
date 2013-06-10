@@ -1,0 +1,64 @@
+
+<atlassian-plugin key="${project.groupId}.${project.artifactId}" name="${project.artifactId}" plugins-version="2">
+    <plugin-info>
+        <description>${project.description}</description>
+        <version>${project.version}</version>
+        <vendor name="${project.organization.name}" url="${project.organization.url}" />
+    </plugin-info>
+
+    <component key="multiDomainTokenService" class="net.nordu.crowd.sso.token.MultiDomainTokenService" />
+
+    <servlet name="ssocookie" class="net.nordu.crowd.sso.SSOCookieServlet" key="ssocookie">
+        <url-pattern>/ssocookie</url-pattern>
+    </servlet>
+
+    <servlet name="setcookie" class="net.nordu.crowd.sso.SetSSOCookieServlet" key="setcookie">
+        <url-pattern>/setcookie</url-pattern>
+    </servlet>
+
+    <servlet name="setemail" class="net.nordu.crowd.sso.SetMailAddressServlet" key="setemail">
+        <url-pattern>/setEmail</url-pattern>
+        <resource type="download" name="style.css" location="skin/style.css">
+            <param name="batch" value="false"/>
+        </resource>
+        <resource type="download" name="images/NORDUnet2.jpg" location="skin/images/NORDUnet2.jpg">
+            <param name="content-type" value="image/jpeg"/>
+            <param name="batch" value="false"/>
+        </resource>
+        <resource type="download" name="images/pipes_back.jpg" location="skin/images/pipes_back.jpg">
+            <param name="content-type" value="image/jpeg"/>
+            <param name="batch" value="false"/>
+        </resource>
+        <resource type="download" name="images/top_back.gif" location="skin/images/top_back.gif">
+            <param name="content-type" value="image/gif"/>
+            <param name="batch" value="false"/>
+        </resource>
+    </servlet>
+
+    <web-resource key="servletSkin" name="Servlet Skin" >
+        <resource type="download" name="style.css" location="skin/style.css">
+            <param name="batch" value="false"/>
+        </resource>
+        <resource type="download" name="images/NORDUnet2.jpg" location="skin/images/NORDUnet2.jpg">
+            <param name="content-type" value="image/jpeg"/>
+            <param name="batch" value="false"/>
+        </resource>
+        <resource type="download" name="images/pipes_back.jpg" location="skin/images/pipes_back.jpg">
+            <param name="content-type" value="image/jpeg"/>
+            <param name="batch" value="false"/>
+        </resource>
+        <resource type="download" name="images/top_back.gif" location="skin/images/top_back.gif">
+            <param name="content-type" value="image/gif"/>
+            <param name="batch" value="false"/>
+        </resource>
+    </web-resource>
+
+    <web-resource key="multidomainresources" name="Multidomain resources">
+        <resource type="download" name="jquery.min.js" location="js/jquery.min.js">
+            <param name="batch" value="false" />
+        </resource>
+        <resource type="download" name="jquery.imagesloaded.js" location="js/jquery.imagesloaded.js"/>
+        <resource type="download" name="sso.js" location="js/sso.js"/>
+    </web-resource>
+
+</atlassian-plugin>

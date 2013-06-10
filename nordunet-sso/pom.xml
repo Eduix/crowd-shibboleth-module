@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>net.nordu.crowd</groupId>
+    <artifactId>nordunet-sso</artifactId>
+    <version>1.0</version>
+
+    <organization>
+        <name>Eduix</name>
+        <url>http://www.eduix.fi/</url>
+    </organization>
+
+    <name>NORDUnet Crowd 2.6 SSO plugin</name>
+    <description>Crowd 2.6 plugin containing modules for NORDUnet SSO</description>
+    <packaging>atlassian-plugin</packaging>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.eduix.crowd</groupId>
+            <artifactId>shibboleth-filter-config</artifactId>
+            <version>1.0</version>
+            <scope>compile</scope>
+        </dependency>
+        <!-- Module dependencies -->
+        <dependency>
+            <groupId>com.atlassian.crowd</groupId>
+            <artifactId>crowd-core</artifactId>
+            <version>${crowd.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.atlassian.crowd</groupId>
+            <artifactId>crowd-integration-api</artifactId>
+            <version>${crowd.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.atlassian.crowd</groupId>
+            <artifactId>crowd-server</artifactId>
+            <version>${crowd.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.atlassian.seraph</groupId>
+            <artifactId>atlassian-seraph</artifactId>
+            <version>1.0</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>com.atlassian.plugins</groupId>
+            <artifactId>atlassian-plugins-webresource</artifactId>
+            <version>${crowd.version}</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.6</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>javax.servlet</groupId>
+            <artifactId>servlet-api</artifactId>
+            <version>2.4</version>
+            <scope>provided</scope>
+        </dependency>    
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>com.atlassian.maven.plugins</groupId>
+                <artifactId>maven-crowd-plugin</artifactId>
+                <version>4.1.7</version>
+                <extensions>true</extensions>
+                <configuration>
+                    <productVersion>${crowd.version}</productVersion>
+                    <productDataVersion>${crowd.data.version}</productDataVersion>
+                    <instructions>
+                        <Import-Package>
+                            com.atlassian.crowd.manager.authentication                            
+                        </Import-Package>
+                    </instructions>
+                </configuration>
+            </plugin>
+            <plugin>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.1</version>
+                <configuration>
+                    <source>1.5</source>
+                    <target>1.5</target>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+    <properties>
+        <crowd.version>2.6.0</crowd.version>
+        <crowd.data.version>2.0.4</crowd.data.version>
+    </properties>
+
+</project>

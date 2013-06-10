@@ -1,0 +1,71 @@
+@media screen {
+    #top h1 {
+        display:-moz-inline-box;
+        display:inline-block;
+        background:transparent url(images/NORDUnet2.jpg) 0 0 no-repeat;
+        text-indent:-3000px;
+        font:0/0 Arial;
+        overflow:hidden;
+        color:rgba(255,255,255,0);
+        vertical-align:bottom;
+        width: 203px;
+        height: 46px;
+        margin-bottom: 20px;
+    }
+}
+body {
+margin:0;
+padding:0;
+}
+#container {
+background:#FFFFFF url(images/pipes_back.jpg) repeat-y scroll left top;
+color:#000000;
+font-family:Arial,Helvetica,sans-serif;
+font-size:12px;
+width:100%;
+}
+#top {
+background:#00B2E4 url(images/top_back.gif) repeat-x scroll left bottom;
+display:block;
+overflow:hidden;
+width:100%;
+padding-top:33px;
+}
+p {
+color:#004788;
+font-size:12px;
+}
+ul {
+color:#004788;
+font-size:12px;
+}
+#content {
+line-height:1.5em;
+margin-left:200px;
+padding:20px;
+width:auto;
+}
+.error {
+    color: #f00;
+    font-weight: bold;
+}
+#failed-domains {
+    padding: 0 1em;
+    list-style-position: inside;
+    margin: 0;
+    color: #666;
+}
+#footer {
+background-color:#D8D8D8;
+border-bottom:1px solid #989898;
+border-top:1px solid #989898;
+clear:both;
+height:35px;
+width:100%;
+}
+#footer p {
+color:#848484;
+font-size:10px;
+margin:12px 10px 10px 200px;
+vertical-align:middle;
+}
