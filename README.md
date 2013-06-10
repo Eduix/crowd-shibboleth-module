@@ -3,6 +3,9 @@ crowd-shibboleth-module
 
 Shibboleth authentication module and accompanying plugin for Atlassian Crowd
 
+By downloading any of the crowd-shibboleth-module files you acknowledge that you have Read and Accepted the NORDUnet IPR Policy:
+https://wiki.nordu.net/display/NORDUwiki/NORDUnet+IPR+Policy
+
 Copyright (c) 2011, NORDUnet A/S
 All rights reserved.
 
