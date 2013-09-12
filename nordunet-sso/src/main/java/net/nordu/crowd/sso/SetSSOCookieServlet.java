@@ -76,11 +76,14 @@ public class SetSSOCookieServlet extends HttpServlet {
          log.warn("Invalid token found: {}", e.getMessage());
          resp.sendError(HttpServletResponse.SC_BAD_REQUEST, e.getMessage());
       }
+      // Set a P3P header for IE so that it accepts our (not really) third party cookie
+      // See http://msdn.microsoft.com/en-us/library/ms537343%28VS.85%29.aspx#first_and_third_party_context
+      resp.setHeader("P3P", "CP=\"NON DSP LAW CUR ADM DEV PSD OUR DEL IND UNI COM CNT\"");
       // Set standard HTTP/1.1 no-cache headers
       resp.setHeader("Cache-Control", "private, no-store, no-cache, must-revalidate");
       // Set standard HTTP/1.0 no-cache header
       resp.setHeader("Pragma", "no-cache");
-      resp.setContentType("image/gif");
+      resp.setContentType("image/gif");            
       resp.getOutputStream().write(PIXEL_BYTES);
    }
 
