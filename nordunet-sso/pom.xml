@@ -87,7 +87,7 @@
                     <productDataVersion>${crowd.data.version}</productDataVersion>
                     <instructions>
                         <Import-Package>
-                            com.atlassian.crowd.manager.authentication                            
+                            *
                         </Import-Package>
                     </instructions>
                 </configuration>

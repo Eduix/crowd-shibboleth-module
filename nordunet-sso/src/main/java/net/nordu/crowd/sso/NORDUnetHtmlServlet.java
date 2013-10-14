@@ -14,10 +14,10 @@ package net.nordu.crowd.sso;
 
 import com.atlassian.config.HomeLocator;
 import com.atlassian.plugin.webresource.WebResourceManager;
-import edu.emory.mathcs.backport.java.util.Collections;
 import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.Collections;
 import java.util.List;
 import javax.servlet.http.HttpServlet;
 import org.apache.commons.io.FileUtils;
