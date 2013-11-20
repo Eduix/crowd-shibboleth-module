@@ -59,7 +59,7 @@ var SSO = {
                 $("#logging-message").text(failText).addClass("error").after("<ul id='failed-domains'>"+failedDomains+"</ul>");
             }
             // All domains loaded - insert required links to page
-            var redirectDelay = 5000;
+            var redirectDelay = 0;
             if(!this.config.emailSet) {
                 $("#content").append('<p>You do not have an email address set. You can set one <a href="/crowd/plugins/servlet/setEmail">here</a></p>');
                 redirectDelay = 10000;
@@ -69,11 +69,15 @@ var SSO = {
                     if(this.failedUrls.length>0) {
                         $("#content").append('<p>You can still continue to your <a href="'+this.config.goTo+'">original destination</a></p>');
                     } else {
+                       if(redirectDelay>0) {
                         $("#content").append('<p>You will be redirected to your <a href="'+this.config.goTo+'">original destination</a> in '+(redirectDelay/1000)+' seconds.</p>');
                         var goTo = this.config.goTo
                         setTimeout(function(){
                             window.location.href=goTo;
                             },redirectDelay);
+                       } else {
+                          window.location.href=goTo;
+                       }
                     }
                 } else {
                     $("#content").append('<p>Login failed for your <a href="'+this.config.goTo+'">original destination</a></p>').addClass("error");

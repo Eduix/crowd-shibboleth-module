@@ -197,6 +197,7 @@ public class SSOCookieServlet extends NORDUnetHtmlServlet {
          multiDomain = !multiDomainUrls.isEmpty();
       }
       if (multiDomain) {
+         res.setContentType("text/html");
          PrintWriter writer = res.getWriter();
          writeHtmlStart(writer, "You are being logged in to all domains", null);
          writer.write("<h1>Multi Domain SSO</h1>");
