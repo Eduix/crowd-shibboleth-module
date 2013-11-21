@@ -69,13 +69,13 @@ var SSO = {
                     if(this.failedUrls.length>0) {
                         $("#content").append('<p>You can still continue to your <a href="'+this.config.goTo+'">original destination</a></p>');
                     } else {
+                       var goTo = this.config.goTo;
                        if(redirectDelay>0) {
                         $("#content").append('<p>You will be redirected to your <a href="'+this.config.goTo+'">original destination</a> in '+(redirectDelay/1000)+' seconds.</p>');
-                        var goTo = this.config.goTo
                         setTimeout(function(){
                             window.location.href=goTo;
                             },redirectDelay);
-                       } else {
+                       } else {                          
                           window.location.href=goTo;
                        }
                     }
