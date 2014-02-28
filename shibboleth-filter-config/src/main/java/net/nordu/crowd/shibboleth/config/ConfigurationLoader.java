@@ -35,18 +35,15 @@ public class ConfigurationLoader {
 
     private static final Logger log = Logger.getLogger(ConfigurationLoader.class);
 
-    public static Configuration loadConfiguration(String file) {
+    public static Configuration loadConfiguration() {
         Configuration config = new Configuration();
         try {
             Map<String, GroupMapper> mappings = new HashMap<String, GroupMapper>();
             Set<String> attributes = new HashSet<String>();
             Set<String> groupsToPurge = new HashSet<String>();
-            if(file==null) {
-                file=Constants.CONFIG_FILE;
-            }
-            InputStream propsIn = ClassLoaderUtils.getResourceAsStream(file, ConfigurationLoader.class);
+            InputStream propsIn = ClassLoaderUtils.getResourceAsStream(Constants.CONFIG_FILE, ConfigurationLoader.class);
             if (propsIn == null) {
-                throw new RuntimeException("Error loading configuration properties. Configuration file not found (\"" + file + "\")");
+                throw new RuntimeException("Error loading configuration properties. Configuration file not found (\"" + Constants.CONFIG_FILE + "\")");
             }
             Properties props = new Properties();
 
@@ -62,7 +59,7 @@ public class ConfigurationLoader {
                 }
             }
             config.setConfigFileLastChecked(System.currentTimeMillis());
-            URL confFileURL = ClassLoaderUtils.getResource(file, ConfigurationLoader.class);
+            URL confFileURL = ClassLoaderUtils.getResource(Constants.CONFIG_FILE, ConfigurationLoader.class);
             if (confFileURL != null && confFileURL.getProtocol().equals("file")) {
                 String confFile = confFileURL.getFile();
                 config.setConfigFile(confFile);
@@ -90,6 +87,11 @@ public class ConfigurationLoader {
             config.setGroupMappers(groupMappers);
             log.debug("Group filters: " + groupMappers.size());
 
+            // Dynamic group mapping
+            config.setDynamicGroupHeader(props.getProperty(Constants.DYNAMIC_GROUP_HEADER));
+            config.setDynamicGroupDelimiter(props.getProperty(Constants.DYNAMIC_GROUP_DELIMITER, ";"));
+            config.setDynamicGroupPurgePrefix(props.getProperty(Constants.DYNAMIC_GROUP_PURGE_PREFIX));
+            
             if (props.getProperty(Constants.DIRECTORY_NAME) != null) {
                 config.setDirectoryName(props.getProperty(Constants.DIRECTORY_NAME));
             } else {

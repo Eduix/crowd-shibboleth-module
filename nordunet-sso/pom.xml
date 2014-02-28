@@ -113,7 +113,7 @@
    </build>
 
    <properties>
-      <crowd.version>2.7.0</crowd.version>
+      <crowd.version>2.6.3</crowd.version>
       <crowd.data.version>2.0.4</crowd.data.version>
    </properties>
 

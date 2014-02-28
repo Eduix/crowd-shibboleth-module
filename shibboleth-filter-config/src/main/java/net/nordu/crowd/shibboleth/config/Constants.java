@@ -28,6 +28,9 @@ interface Constants {
     public static final String GROUP_MAPPER_MATCH = "match";
     public static final String GROUP_MAPPER_SENSITIVE = "sensitive";    
     public static final String GROUP_MAPPER_EXCLUSIVE = "exclusive";
+    public static final String DYNAMIC_GROUP_HEADER = "dynamic.group.header";
+    public static final String DYNAMIC_GROUP_DELIMITER = "dynamic.group.delimiter";
+    public static final String DYNAMIC_GROUP_PURGE_PREFIX = "dynamic.group.purge.prefix";
     public static final String RELOAD_CONFIG = "reload.config";
     public static final String RELOAD_CONFIG_INTERVAL = "reload.config.interval";
     public static final String DIRECTORY_NAME = "directory.name";
