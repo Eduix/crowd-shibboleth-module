@@ -39,5 +39,6 @@ interface Constants {
     public static final String HEADER_LAST_NAME = "headers.lastname";
     public static final String HEADER_MAIL = "headers.mail";
     public static final String SYNC = "sync";
+    public static final String SYNC_EVERY_LOGIN = "sync.every.login";
     public static final String HOME_ORGANIZATIONS = "home.organizations";
 }

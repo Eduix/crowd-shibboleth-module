@@ -143,8 +143,19 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
       boolean homeOrgUser = remoteUser != null && !remoteUser.equals(username);
       request.setAttribute(HOME_ORG_USER, homeOrgUser);
       CrowdUserDetails userDetails = null;
+      boolean groupsChanged = false;
       try {
          userDetails = crowdUserDetailsService.loadUserByUsername(username);
+         // User attributes and groups are not updated for home organization users
+         if (!homeOrgUser) {
+            try {
+               Directory directory = directoryManager.findDirectoryByName(config.getDirectoryName());
+               updateUserAttributes(username, request, directory);
+               groupsChanged = updateUserGroups(username, request, directory);
+            } catch (DirectoryNotFoundException e) {
+               log.error("Could not find user directory {}", config.getDirectoryName());
+            }
+         }
       } catch (UsernameNotFoundException e) {
          if (homeOrgUser) {
             log.error("User presumed to be found from LDAP could not be found", e);
@@ -159,7 +170,7 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
       }
 
       if (userDetails == null) {
-         log.debug("No user " + username + " found. Creating");
+         log.debug("No user {} found. Creating", username);
          String firstName = request.getHeader(config.getFirstNameHeader());
          String lastName = request.getHeader(config.getLastNameHeader());
          String email = request.getHeader(config.getEmailHeader());
@@ -173,7 +184,27 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
          if (!createUser(username, firstName, lastName, email, newUserPassword)) {
             return null;
          } else {
+            // Set groups for the user if he/she is not a home organisation user
+            if (!homeOrgUser) {
+               try {
+                  Directory directory = directoryManager.findDirectoryByName(config.getDirectoryName());
+                  updateUserGroups(username, request, directory);                 
+               } catch (DirectoryNotFoundException e) {
+                  log.error("Could not find user directory {}", config.getDirectoryName());
+               }
+            }
             newUser = true;
+         }
+      } else if (!homeOrgUser && config.isSyncEveryLogin() && groupsChanged) {
+         // User needs to be resynced to applications and the requires
+         // the user password so generate a new one - only do this if group
+         // memberships have changed
+         newUserPassword = randomPassword();
+         try {
+            Directory directory = directoryManager.findDirectoryByName(config.getDirectoryName());
+            updateUserPassword(username, newUserPassword, directory);
+         } catch (DirectoryNotFoundException e) {
+            log.error("Could not find user directory {}", config.getDirectoryName());
          }
       }
       UserAuthenticationContext authCtx = new UserAuthenticationContext();
@@ -183,7 +214,7 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
       authCtx.setValidationFactors(validationFactors);
 
       if (log.isTraceEnabled()) {
-         log.trace("Trying to log in as " + username + " without a password");
+         log.trace("Trying to log in as {} without a password", username);
       }
       try {
          Token token = tokenAuthenticationManager.authenticateUserWithoutValidatingPassword(authCtx);
@@ -193,7 +224,7 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
 
          Authentication newAuth = getAuthenticationManager().authenticate(crowdAuthRequest);
          if (newAuth != null) {
-            log.debug("Authentication: principal " + newAuth.getPrincipal() + " credentials " + newAuth.getCredentials() + " isAuthenticated " + newAuth.isAuthenticated());
+            log.debug("Authentication: principal {} credentials {} isAuthenticated {}", newAuth.getPrincipal(), newAuth.getCredentials(), newAuth.isAuthenticated());
          }
          SecurityContextHolder.getContext().setAuthentication(newAuth);
       } catch (InvalidAuthenticationException e) {
@@ -214,13 +245,13 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
          log.error("Error authenticating user", e);
       }
 
-      if (newUser) {
-         // Sync users to all necessary applications
+      if (newUser || (!homeOrgUser && config.isSyncEveryLogin() && groupsChanged)) {
+         // Sync users to all necessary applications         
          if (config.syncRequired()) {
             HttpClient client = new HttpClient();
             // TODO: sync users only to applications they need to be synced to
             // (get their application list and fetch the urls for that list)
-            log.info("Syncing user " + username + " to all applications");
+            log.info("Syncing user {} to all applications", username);
             for (String url : config.getAllUrls()) {
                GetMethod get = new GetMethod(url);
                get.setQueryString(new NameValuePair[]{
@@ -231,12 +262,12 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
                try {
                   int statusCode = client.executeMethod(get);
                   if (statusCode != HttpStatus.SC_OK) {
-                     log.warn("Could not sync user " + username + " using url " + url);
+                     log.warn("Could not sync user {} using url {}", username, url);
                   }
                } catch (HttpException e) {
-                  log.error("Fatal protocol violation: " + e.getMessage());
+                  log.error("Fatal protocol violation. Could not sync user {} using url {}", username, url, e);
                } catch (IOException e) {
-                  log.error("Fatal transport error: " + e.getMessage());
+                  log.error("Fatal transport error Could not sync user {} using url {}", username, url, e);
                } finally {
                   get.releaseConnection();
                }
@@ -244,7 +275,7 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
          }
          // This session attribute is read by the SSO Cookie Servlet (part of
          // the NORDUnet Crowd SSO Plugin)
-         request.getSession().setAttribute("new.user", true);
+         request.getSession().setAttribute("new.user", newUser);
       }
       return SecurityContextHolder.getContext().getAuthentication();
    }
@@ -384,18 +415,6 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
          if (authResult.getCredentials() != null) {
             try {
                httpAuthenticator.setPrincipalToken(request, response, authResult.getCredentials().toString());
-               Object homeOrgUser = request.getAttribute(HOME_ORG_USER);
-               // User attributes and groups are not updated for home organization users
-               if (homeOrgUser != null && !(Boolean) homeOrgUser) {
-                  String username = ((CrowdUserDetails) authResult.getPrincipal()).getUsername();
-                  try {
-                     Directory directory = directoryManager.findDirectoryByName(config.getDirectoryName());
-                     updateUserAttributes(username, request, directory);
-                     updateUserGroups(username, request, directory);
-                  } catch (DirectoryNotFoundException e) {
-                     log.error("Could not find user directory " + config.getDirectoryName());
-                  }
-               }
             } catch (Exception e) {
                // occurs if application's auth token expires while trying to look up the domain property from the Crowd server
                logger.error("Unable to set Crowd SSO token", e);
@@ -439,15 +458,27 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
       }
    }
 
+   private void updateUserPassword(String username, String password, Directory directory) {
+      try {
+         directoryManager.updateUserCredential(directory.getId(), username, new PasswordCredential(password));
+      } catch (UserNotFoundException e) {
+         log.error("Could not find user to update password");
+      } catch (Exception e) {
+         log.error("Could not update user password", e);
+      }
+   }
+
    /**
     * Update user groups according to the group mappings
     *
     * @param username
     * @param request
     * @param directory
+    * @return have there changes to user groups
     */
-   private void updateUserGroups(String username, HttpServletRequest request, Directory directory) {
+   private boolean updateUserGroups(String username, HttpServletRequest request, Directory directory) {
       checkReloadConfig();
+      boolean groupsChanged = false;
       Set<String> groupsFromHeaders = new HashSet<String>();
       Set<String> mappedGroups = new HashSet<String>();
       log.debug("Updating user groups");
@@ -463,11 +494,13 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
 
       // Get dynamic groups            
       if (config.getDynamicGroupHeader() != null) {
-         String dynamicGroupNameString = request.getHeader(config.getDynamicGroupHeader());         
+         String dynamicGroupNameString = request.getHeader(config.getDynamicGroupHeader());
          String[] dynamicGroupNames = StringUtils.split(dynamicGroupNameString, config.getDynamicGroupDelimiter());
          if (dynamicGroupNames != null) {
             for (String dynamicGroupName : dynamicGroupNames) {
-               addUserToGroup(username, dynamicGroupName, directory);
+               if (addUserToGroup(username, dynamicGroupName, directory)) {
+                  groupsChanged = true;
+               }
                groupsFromHeaders.add(dynamicGroupName);
             }
          }
@@ -485,29 +518,31 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
          }
       }
       mappedGroups.removeAll(groupsFromHeaders);
-      candidatesForPurging.retainAll(mappedGroups);
+      candidatesForPurging.retainAll(mappedGroups);      
       for (String groupToPurge : candidatesForPurging) {
          if (log.isDebugEnabled()) {
-            log.debug("Removing user from group " + groupToPurge);
+            log.debug("Removing user from group {}", groupToPurge);
          }
          try {
             directoryManager.removeUserFromGroup(directory.getId(), username, groupToPurge);
+            groupsChanged = true;
          } catch (DirectoryPermissionException e) {
-            log.error("Could not remove user from group " + groupToPurge, e);
+            log.error("Could not remove user from group {}", groupToPurge, e);
          } catch (DirectoryNotFoundException e) {
-            log.error("Could not remove user from group " + groupToPurge, e);
+            log.error("Could not remove user from group {}", groupToPurge, e);
          } catch (GroupNotFoundException e) {
-            log.error("Could not remove user from group " + groupToPurge, e);
+            log.error("Could not remove user from group {}", groupToPurge, e);
          } catch (MembershipNotFoundException e) {
-            log.error("Could not remove user from group " + groupToPurge, e);
+            log.error("Could not remove user from group {}", groupToPurge, e);
          } catch (OperationFailedException e) {
-            log.error("Could not remove user from group " + groupToPurge, e);
+            log.error("Could not remove user from group {}", groupToPurge, e);
          } catch (ReadOnlyGroupException e) {
-            log.error("Could not remove user from group " + groupToPurge, e);
+            log.error("Could not remove user from group {}", groupToPurge, e);
          } catch (UserNotFoundException e) {
-            log.error("Could not remove user from group " + groupToPurge, e);
+            log.error("Could not remove user from group {}", groupToPurge, e);
          }
       }
+      return groupsChanged;
    }
 
    private Set<String> getCurrentGroupsForUser(String username) {
@@ -534,29 +569,31 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
     *
     * @param username
     * @param groupName
+    * @return has user been added to group
     */
-   private void addUserToGroup(String username, String groupName, Directory directory) {
+   private boolean addUserToGroup(String username, String groupName, Directory directory) {
       Group group = null;
       try {
          group = directoryManager.findGroupByName(directory.getId(), groupName);
          if (group != null && !directoryManager.isUserDirectGroupMember(directory.getId(), username, groupName)) {
-            log.debug("Adding user to group " + groupName);
+            log.debug("Adding user to group {}", groupName);
             directoryManager.addUserToGroup(directory.getId(), username, groupName);
+            return true;
          }
       } catch (DirectoryNotFoundException e) {
-         log.error("Could not add user " + username + " to group " + groupName, e);
+         log.error("Could not add user {} to group {}", username, groupName, e);
       } catch (GroupNotFoundException e) {
-         log.debug("Could not find group " + groupName + ". Will try creating it");
+         log.debug("Could not find group {}. Will try creating it", groupName);
       } catch (UserNotFoundException e) {
-         log.error("Could not add user " + username + " to group " + groupName, e);
+         log.error("Could not add user {} to group {}", username, groupName, e);
       } catch (DirectoryPermissionException e) {
-         log.error("Could not add user " + username + " to group " + groupName, e);
+         log.error("Could not add user {} to group {}", username, groupName, e);
       } catch (OperationFailedException e) {
-         log.error("Could not add user " + username + " to group " + groupName, e);
+         log.error("Could not add user {} to group {}", username, groupName, e);
       } catch (ReadOnlyGroupException e) {
-         log.error("Could not add user " + username + " to group " + groupName, e);
+         log.error("Could not add user {} to group {}", username, groupName, e);
       } catch (MembershipAlreadyExistsException e) {
-         log.error("User " + username + " is already a member of group " + groupName);
+         log.error("User {} is already a member of group {}", username, groupName);
       }
       if (group == null) {
          try {
@@ -566,24 +603,26 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
             log.debug("Group added");
             directoryManager.addUserToGroup(directory.getId(), username, groupName);
             log.debug("user added to group");
+            return true;
          } catch (InvalidGroupException e) {
-            log.error("Could not add group " + groupName, e);
+            log.error("Could not add group {}", groupName, e);
          } catch (GroupNotFoundException e) {
-            log.error("Could not add user " + username + " to group " + groupName, e);
+            log.error("Could not add user {} to group {}", username, groupName, e);
          } catch (UserNotFoundException e) {
-            log.error("Could not add user " + username + " to group " + groupName, e);
+            log.error("Could not add user {} to group {}", username, groupName, e);
          } catch (DirectoryNotFoundException e) {
-            log.error("Could not add user " + username + " to group " + groupName, e);
+            log.error("Could not add user {} to group {}", username, groupName, e);
          } catch (DirectoryPermissionException e) {
-            log.error("Could not add user " + username + " to group " + groupName, e);
+            log.error("Could not add user {} to group {}", username, groupName, e);
          } catch (OperationFailedException e) {
-            log.error("Could not add user " + username + " to group " + groupName, e);
+            log.error("Could not add user {} to group {}", username, groupName, e);
          } catch (ReadOnlyGroupException e) {
-            log.error("Could not add user " + username + " to group " + groupName, e);
+            log.error("Could not add user {} to group {}", username, groupName, e);
          } catch (MembershipAlreadyExistsException e) {
-            log.error("User " + username + " is already a member of group " + groupName);
+            log.error("User {} is already a member of group {}", username, groupName);
          }
       }
+      return false;
    }
 
    /**

@@ -7,14 +7,14 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.eduix.crowd</groupId>
     <artifactId>shibboleth-filter</artifactId>
-    <version>1.0.271</version>
+    <version>1.0.272</version>
 
     <organization>
         <name>Eduix</name>
         <url>http://www.eduix.fi/</url>
     </organization>
 
-    <name>Crowd Shibboleth filter for Crowd 2.7.1</name>
+    <name>Crowd Shibboleth filter for Crowd 2.7.2</name>
     <description>Crowd Shibboleth filter</description>
     <packaging>atlassian-plugin</packaging>
 
@@ -22,7 +22,7 @@
         <dependency>
             <groupId>com.eduix.crowd</groupId>
             <artifactId>shibboleth-filter-config</artifactId>
-            <version>1.1</version>
+            <version>1.1.1</version>
             <scope>compile</scope>
         </dependency>
             <!-- Module dependencies -->
@@ -108,7 +108,7 @@
             <plugin>
                 <groupId>com.atlassian.maven.plugins</groupId>
                 <artifactId>maven-crowd-plugin</artifactId>
-                <version>4.1.7</version>
+                <version>5.0.4</version>
                 <extensions>true</extensions>
                 <configuration>
                     <productVersion>${crowd.version}</productVersion>
@@ -127,7 +127,7 @@
     </build>
 
     <properties>
-        <crowd.version>2.7.1</crowd.version>
+        <crowd.version>2.7.2</crowd.version>
         <crowd.data.version>2.0.4</crowd.data.version>
     </properties>
 

@@ -107,13 +107,15 @@ public class ConfigurationLoader {
             Map<String, String> applicationMap = new HashMap<String, String>();
             for (Object key : props.keySet()) {
                 String k = (String) key;
-                if(k.startsWith(Constants.SYNC)) {
+                if(k.startsWith(Constants.SYNC) && StringUtils.split(k, '.').length == 2) {
                     String appName = k.substring(5);
                     applicationMap.put(appName, props.getProperty(k));
                 }
             }
             config.setApplicationMap(applicationMap);
 
+            config.setSyncEveryLogin(Boolean.parseBoolean(props.getProperty(Constants.SYNC_EVERY_LOGIN, "false")));
+            
             String homeOrganizationsStr = props.getProperty(Constants.HOME_ORGANIZATIONS);
             if(homeOrganizationsStr != null) {
                 Set homeOrgs = new HashSet<String>();

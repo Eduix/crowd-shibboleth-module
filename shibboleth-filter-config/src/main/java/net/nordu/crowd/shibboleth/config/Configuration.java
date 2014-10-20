@@ -41,6 +41,7 @@ public class Configuration {
    private String emailHeader;
    private Set<String> homeOrganizations;
    private Map<String, String> applicationMap;
+   private boolean syncEveryLogin;
 
    public String getEmailHeader() {
       return emailHeader;
@@ -180,5 +181,13 @@ public class Configuration {
 
    public static Configuration newInstanceFromFile() {
       return ConfigurationLoader.loadConfiguration();
+   }
+
+   public boolean isSyncEveryLogin() {
+      return syncEveryLogin;
+   }
+
+   public void setSyncEveryLogin(boolean syncEveryLogin) {
+      this.syncEveryLogin = syncEveryLogin;
    }
 }
