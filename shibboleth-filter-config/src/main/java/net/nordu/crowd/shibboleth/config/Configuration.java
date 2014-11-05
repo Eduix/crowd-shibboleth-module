@@ -25,10 +25,10 @@ import java.util.Set;
  */
 public class Configuration {
 
-   private Set<GroupMapper> groupMappers;
+   private Set<GroupMapper> groupMappers;   
    private String dynamicGroupHeader;
    private String dynamicGroupDelimiter;
-   private String dynamicGroupPurgePrefix;
+   private String dynamicGroupPurgePrefix;   
    private boolean reloadConfig;
    private long reloadConfigInterval;
    private String configFile;
@@ -40,8 +40,9 @@ public class Configuration {
    private String lastNameHeader;
    private String emailHeader;
    private Set<String> homeOrganizations;
-   private Map<String, String> applicationMap;
-   private boolean syncEveryLogin;
+   private Map<String, String> applicationMap;   
+   private boolean syncEveryLogin;   
+   private Set<String> attributeHeaders;   
 
    public String getEmailHeader() {
       return emailHeader;
@@ -73,7 +74,7 @@ public class Configuration {
 
    public void setGroupMappers(Set<GroupMapper> groupMappers) {
       this.groupMappers = groupMappers;
-   }
+   }   
 
    public String getDynamicGroupHeader() {
       return dynamicGroupHeader;
@@ -97,7 +98,7 @@ public class Configuration {
 
    public void setDynamicGroupPurgePrefix(String dynamicGroupPurgePrefix) {
       this.dynamicGroupPurgePrefix = dynamicGroupPurgePrefix;
-   }
+   }   
 
    public boolean isReloadConfig() {
       return reloadConfig;
@@ -141,7 +142,7 @@ public class Configuration {
 
    public String getDirectoryName() {
       return directoryName;
-   }
+   }   
 
    public void setDirectoryName(String directoryName) {
       this.directoryName = directoryName;
@@ -179,8 +180,12 @@ public class Configuration {
       return !applicationMap.isEmpty();
    }
 
-   public static Configuration newInstanceFromFile() {
-      return ConfigurationLoader.loadConfiguration();
+   public Set<String> getAttributeHeaders() {
+      return attributeHeaders;
+   }
+
+   public void setAttributeHeaders(Set<String> attributeHeaders) {
+      this.attributeHeaders = attributeHeaders;
    }
 
    public boolean isSyncEveryLogin() {
@@ -189,5 +194,9 @@ public class Configuration {
 
    public void setSyncEveryLogin(boolean syncEveryLogin) {
       this.syncEveryLogin = syncEveryLogin;
+   }
+
+   public static Configuration newInstanceFromFile() {
+      return ConfigurationLoader.loadConfiguration();
    }
 }
