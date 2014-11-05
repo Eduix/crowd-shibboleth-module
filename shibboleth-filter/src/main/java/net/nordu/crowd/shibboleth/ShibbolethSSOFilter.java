@@ -58,7 +58,9 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
@@ -181,7 +183,7 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
          }
 
          newUserPassword = randomPassword();
-         if (!createUser(username, firstName, lastName, email, newUserPassword)) {
+         if (!createUser(username, firstName, lastName, email, newUserPassword, getUserAttributesFromHeaders(request))) {
             return null;
          } else {
             // Set groups for the user if he/she is not a home organisation user
@@ -324,7 +326,7 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
       return false;
    }
 
-   private boolean createUser(String username, String firstname, String lastname, String email, String password) {
+   private boolean createUser(String username, String firstname, String lastname, String email, String password, Map<String, Set<String>> attributes) {
       try {
          Directory directory = directoryManager.findDirectoryByName(config.getDirectoryName());
          UserTemplate template = new UserTemplate(username);
@@ -335,6 +337,9 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
          template.setDisplayName(firstname + " " + lastname);
          template.setActive(Boolean.TRUE);
          directoryManager.addUser(directory.getId(), template, new PasswordCredential(password, false));
+                     if(!attributes.isEmpty()) {               
+               directoryManager.storeUserAttributes(directory.getId(), username, attributes);
+            }
          return true;
       } catch (DirectoryNotFoundException e) {
          log.error("Error creating new user", e);
@@ -348,6 +353,8 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
          log.error("Error creating new user", e);
       } catch (UserAlreadyExistsException e) {
          log.error("Error creating new user", e);
+      } catch (UserNotFoundException e) {
+         log.error("Error setting attributes for new user", e);
       }
       return false;
    }
@@ -451,12 +458,38 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
          mutableUser.setLastName(lastName);
          mutableUser.setDisplayName(firstName + " " + lastName);
          directoryManager.updateUser(directory.getId(), mutableUser);
+         Map<String, Set<String>> attributesFromHeaders = getUserAttributesFromHeaders(request);
+         if(!attributesFromHeaders.isEmpty()) {
+            log.debug("Storing user attributes {}", attributesFromHeaders);
+            directoryManager.storeUserAttributes(directory.getId(), username, attributesFromHeaders);
+         }         
       } catch (UserNotFoundException e) {
          log.error("Could not find user to update attributes");
       } catch (Exception e) {
          log.error("Could not update user attributes", e);
       }
    }
+   
+    private Map<String, Set<String>> getUserAttributesFromHeaders(HttpServletRequest request) {
+       Map<String, Set<String>> attributesFromHeaders = new HashMap<String,Set<String>>();
+       Enumeration headerValues;
+       String value;
+       Set<String> valueSet;       
+       for (String headerName : config.getAttributeHeaders()) {          
+          valueSet = new HashSet<String>();
+          headerValues = request.getHeaders(headerName);
+          while(headerValues.hasMoreElements()) {             
+             value = (String)headerValues.nextElement();             
+             if(!StringUtils.isBlank(value)) {
+                valueSet.add(value);
+             }
+          }
+          if(!valueSet.isEmpty()) {
+             attributesFromHeaders.put(headerName, valueSet);
+          }
+       }
+       return attributesFromHeaders;
+    }   
 
    private void updateUserPassword(String username, String password, Directory directory) {
       try {

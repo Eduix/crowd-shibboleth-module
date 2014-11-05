@@ -124,6 +124,15 @@ public class ConfigurationLoader {
                 }
                 config.setHomeOrganizations(homeOrgs);
             }
+            
+            String attributeHeaderStr = props.getProperty(Constants.ATTRIBUTE_HEADERS);
+            if(attributeHeaderStr != null) {
+               Set attributeHeaders = new HashSet<String>();
+               for (String header : StringUtils.split(attributeHeaderStr, ",")) {
+                  attributeHeaders.add(header.trim());
+               }
+               config.setAttributeHeaders(attributeHeaders);
+            }
 
         } catch (IOException ex) {
             log.error("Error loading configuration properties", ex);
