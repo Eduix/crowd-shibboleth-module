@@ -25,133 +25,142 @@ import java.util.Set;
  */
 public class Configuration {
 
-    private Set<GroupMapper> groupMappers;
-    private boolean reloadConfig;
-    private long reloadConfigInterval;
-    private String configFile;
-    private long configFileLastModified;
-    private long configFileLastChecked;
-    private String directoryName;
-    private boolean latin1ToUTF8;
-    private String firstNameHeader;
-    private String lastNameHeader;
-    private String emailHeader;
-    private Set<String> homeOrganizations;
-    private Map<String, String> applicationMap;
+   private Set<GroupMapper> groupMappers;
+   private boolean reloadConfig;
+   private long reloadConfigInterval;
+   private String configFile;
+   private long configFileLastModified;
+   private long configFileLastChecked;
+   private String directoryName;
+   private boolean latin1ToUTF8;
+   private String firstNameHeader;
+   private String lastNameHeader;
+   private String emailHeader;
+   private Set<String> homeOrganizations;
+   private Map<String, String> applicationMap;
+   private Set<String> attributeHeaders;
 
-    public String getEmailHeader() {
-        return emailHeader;
-    }
+   public String getEmailHeader() {
+      return emailHeader;
+   }
 
-    public void setEmailHeader(String emailHeader) {
-        this.emailHeader = emailHeader;
-    }
+   public void setEmailHeader(String emailHeader) {
+      this.emailHeader = emailHeader;
+   }
 
-    public String getFirstNameHeader() {
-        return firstNameHeader;
-    }
+   public String getFirstNameHeader() {
+      return firstNameHeader;
+   }
 
-    public void setFirstNameHeader(String firstNameHeader) {
-        this.firstNameHeader = firstNameHeader;
-    }
+   public void setFirstNameHeader(String firstNameHeader) {
+      this.firstNameHeader = firstNameHeader;
+   }
 
-    public String getLastNameHeader() {
-        return lastNameHeader;
-    }
+   public String getLastNameHeader() {
+      return lastNameHeader;
+   }
 
-    public void setLastNameHeader(String lastNameHeader) {
-        this.lastNameHeader = lastNameHeader;
-    }
+   public void setLastNameHeader(String lastNameHeader) {
+      this.lastNameHeader = lastNameHeader;
+   }
 
-    public Set<GroupMapper> getGroupMappers() {
-        return groupMappers;
-    }
+   public Set<GroupMapper> getGroupMappers() {
+      return groupMappers;
+   }
 
-    public void setGroupMappers(Set<GroupMapper> groupMappers) {
-        this.groupMappers = groupMappers;
-    }
+   public void setGroupMappers(Set<GroupMapper> groupMappers) {
+      this.groupMappers = groupMappers;
+   }
 
-    public boolean isReloadConfig() {
-        return reloadConfig;
-    }
+   public boolean isReloadConfig() {
+      return reloadConfig;
+   }
 
-    public void setReloadConfig(boolean reloadConfig) {
-        this.reloadConfig = reloadConfig;
-    }
+   public void setReloadConfig(boolean reloadConfig) {
+      this.reloadConfig = reloadConfig;
+   }
 
-    public long getReloadConfigInterval() {
-        return reloadConfigInterval;
-    }
+   public long getReloadConfigInterval() {
+      return reloadConfigInterval;
+   }
 
-    public void setReloadConfigInterval(long reloadConfigInterval) {
-        this.reloadConfigInterval = reloadConfigInterval;
-    }
+   public void setReloadConfigInterval(long reloadConfigInterval) {
+      this.reloadConfigInterval = reloadConfigInterval;
+   }
 
-    public long getConfigFileLastChecked() {
-        return configFileLastChecked;
-    }
+   public long getConfigFileLastChecked() {
+      return configFileLastChecked;
+   }
 
-    public void setConfigFileLastChecked(long configFileLastChecked) {
-        this.configFileLastChecked = configFileLastChecked;
-    }
+   public void setConfigFileLastChecked(long configFileLastChecked) {
+      this.configFileLastChecked = configFileLastChecked;
+   }
 
-    public long getConfigFileLastModified() {
-        return configFileLastModified;
-    }
+   public long getConfigFileLastModified() {
+      return configFileLastModified;
+   }
 
-    public void setConfigFileLastModified(long configFileLastModified) {
-        this.configFileLastModified = configFileLastModified;
-    }
+   public void setConfigFileLastModified(long configFileLastModified) {
+      this.configFileLastModified = configFileLastModified;
+   }
 
-    public String getConfigFile() {
-        return configFile;
-    }
+   public String getConfigFile() {
+      return configFile;
+   }
 
-    public void setConfigFile(String configFile) {
-        this.configFile = configFile;
-    }
+   public void setConfigFile(String configFile) {
+      this.configFile = configFile;
+   }
 
-    public String getDirectoryName() {
-        return directoryName;
-    }
+   public String getDirectoryName() {
+      return directoryName;
+   }
 
-    public void setDirectoryName(String directoryName) {
-        this.directoryName = directoryName;
-    }
+   public void setDirectoryName(String directoryName) {
+      this.directoryName = directoryName;
+   }
 
-    public Set<String> getHomeOrganizations() {
-        return homeOrganizations;
-    }
+   public Set<String> getHomeOrganizations() {
+      return homeOrganizations;
+   }
 
-    public void setHomeOrganizations(Set<String> homeOrganizations) {
-        this.homeOrganizations = homeOrganizations;
-    }
+   public void setHomeOrganizations(Set<String> homeOrganizations) {
+      this.homeOrganizations = homeOrganizations;
+   }
 
-    public boolean isLatin1ToUTF8() {
-        return latin1ToUTF8;
-    }
+   public boolean isLatin1ToUTF8() {
+      return latin1ToUTF8;
+   }
 
-    public void setLatin1ToUTF8(boolean latin1ToUTF8) {
-        this.latin1ToUTF8 = latin1ToUTF8;
-    }
+   public void setLatin1ToUTF8(boolean latin1ToUTF8) {
+      this.latin1ToUTF8 = latin1ToUTF8;
+   }
 
-    public void setApplicationMap(Map<String, String> applicationMap) {
-        this.applicationMap = applicationMap;
-    }
+   public void setApplicationMap(Map<String, String> applicationMap) {
+      this.applicationMap = applicationMap;
+   }
 
-    public String getUrl(String application) {
-        return application == null ? null : applicationMap.get(application);
-    }
+   public String getUrl(String application) {
+      return application == null ? null : applicationMap.get(application);
+   }
 
-    public Collection<String> getAllUrls() {
-        return Collections.unmodifiableCollection(applicationMap.values());
-    }
+   public Collection<String> getAllUrls() {
+      return Collections.unmodifiableCollection(applicationMap.values());
+   }
 
-    public boolean syncRequired() {
-        return !applicationMap.isEmpty();
-    }
+   public boolean syncRequired() {
+      return !applicationMap.isEmpty();
+   }
 
-    public static Configuration newInstanceFromFile() {
-        return ConfigurationLoader.loadConfiguration(null);
-    }
+   public Set<String> getAttributeHeaders() {
+      return attributeHeaders;
+   }
+
+   public void setAttributeHeaders(Set<String> attributeHeaders) {
+      this.attributeHeaders = attributeHeaders;
+   }
+
+   public static Configuration newInstanceFromFile() {
+      return ConfigurationLoader.loadConfiguration(null);
+   }
 }

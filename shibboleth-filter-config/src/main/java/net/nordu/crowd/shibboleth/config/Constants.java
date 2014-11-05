@@ -37,4 +37,5 @@ interface Constants {
     public static final String HEADER_MAIL = "headers.mail";
     public static final String SYNC = "sync";
     public static final String HOME_ORGANIZATIONS = "home.organizations";
+    public static final String ATTRIBUTE_HEADERS = "headers.to.attributes";
 }

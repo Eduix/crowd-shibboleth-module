@@ -57,7 +57,9 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
@@ -168,10 +170,10 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
                 lastName = StringUtil.latin1ToUTF8(lastName);
             }
 
-            newUserPassword = randomPassword();
-            if (!createUser(username, firstName, lastName, email, newUserPassword)) {
+            newUserPassword = randomPassword();            
+            if (!createUser(username, firstName, lastName, email, newUserPassword, getUserAttributesFromHeaders(request))) {
                 return null;
-            } else {
+            } else {               
                 newUser = true;
             }
         }
@@ -292,7 +294,7 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
         return false;
     }
 
-    private boolean createUser(String username, String firstname, String lastname, String email, String password) {
+    private boolean createUser(String username, String firstname, String lastname, String email, String password, Map<String, Set<String>> attributes) {
         try {
             Directory directory = directoryManager.findDirectoryByName(config.getDirectoryName());
             UserTemplate template = new UserTemplate(username);
@@ -302,7 +304,10 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
             template.setEmailAddress(email);
             template.setDisplayName(firstname + " " + lastname);
             template.setActive(Boolean.TRUE);
-            directoryManager.addUser(directory.getId(), template, new PasswordCredential(password, false));
+            directoryManager.addUser(directory.getId(), template, new PasswordCredential(password, false));                        
+            if(!attributes.isEmpty()) {               
+               directoryManager.storeUserAttributes(directory.getId(), username, attributes);
+            }
             return true;
         } catch (DirectoryNotFoundException e) {
             log.error("Error creating new user", e);
@@ -316,6 +321,8 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
             log.error("Error creating new user", e);
         } catch (UserAlreadyExistsException e) {
             log.error("Error creating new user", e);
+        } catch (UserNotFoundException e) {
+           log.error("Error adding attributes to new user", e);
         }
         return false;
     }
@@ -417,8 +424,7 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
             UserTemplate mutableUser = new UserTemplate(foundUser);
             String firstName = request.getHeader(config.getFirstNameHeader());
             String lastName = request.getHeader(config.getLastNameHeader());
-            String email = request.getHeader(config.getEmailHeader());
-
+            String email = request.getHeader(config.getEmailHeader());            
             // Convert first name and last name from latin1 to utf8
             // TODO: this could be a configuration
             firstName = StringUtil.latin1ToUTF8(firstName);
@@ -429,7 +435,12 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
             mutableUser.setFirstName(firstName);
             mutableUser.setLastName(lastName);
             mutableUser.setDisplayName(firstName + " " + lastName);
-            directoryManager.updateUser(directory.getId(), mutableUser);
+            directoryManager.updateUser(directory.getId(), mutableUser);            
+            Map<String, Set<String>> attributesFromHeaders = getUserAttributesFromHeaders(request);
+            if(!attributesFromHeaders.isEmpty()) {
+               log.debug("Storing user attributes {}", attributesFromHeaders);
+               directoryManager.storeUserAttributes(directory.getId(), username, attributesFromHeaders);
+            }
         } catch (UserNotFoundException e) {
             log.error("Could not find user to update attributes");
         } catch (Exception e) {
@@ -437,6 +448,27 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
         }
     }
 
+    private Map<String, Set<String>> getUserAttributesFromHeaders(HttpServletRequest request) {
+       Map<String, Set<String>> attributesFromHeaders = new HashMap<String,Set<String>>();
+       Enumeration headerValues;
+       String value;
+       Set<String> valueSet;       
+       for (String headerName : config.getAttributeHeaders()) {          
+          valueSet = new HashSet<String>();
+          headerValues = request.getHeaders(headerName);
+          while(headerValues.hasMoreElements()) {             
+             value = (String)headerValues.nextElement();             
+             if(!StringUtils.isBlank(value)) {
+                valueSet.add(value);
+             }
+          }
+          if(!valueSet.isEmpty()) {
+             attributesFromHeaders.put(headerName, valueSet);
+          }
+       }
+       return attributesFromHeaders;
+    }
+    
     /**
      * Update user groups according to the group mappings
      *
