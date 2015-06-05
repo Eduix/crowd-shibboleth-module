@@ -57,6 +57,7 @@ import java.rmi.RemoteException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -578,24 +579,22 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
       return groupsChanged;
    }
 
-   private Set<String> getCurrentGroupsForUser(String username) {
-      Set<String> groups = new HashSet<String>();
-      try {
-         String[] groupNames = securityServerClient.findAllGroupNames();
-         for (String groupName : groupNames) {
-            if (securityServerClient.isGroupMember(groupName, username)) {
-               groups.add(groupName);
-            }
-         }
-      } catch (RemoteException e) {
-         log.error("Error getting current groups for user", e);
-      } catch (InvalidAuthorizationTokenException e) {
-         log.error("Error getting current groups for user", e);
-      } catch (InvalidAuthenticationException e) {
-         log.error("Error getting current groups for user", e);
-      }
-      return groups;
-   }
+    private Set<String> getCurrentGroupsForUser(String username) {       
+        Set<String> groups = new HashSet<String>();
+        try {
+            String[] groupMemberships = securityServerClient.findGroupMemberships(username);
+            groups.addAll(Arrays.asList(groupMemberships));
+        } catch (RemoteException e) {
+            log.error("Error getting current groups for user", e);
+        } catch (InvalidAuthorizationTokenException e) {
+            log.error("Error getting current groups for user", e);
+        } catch (InvalidAuthenticationException e) {
+            log.error("Error getting current groups for user", e);
+        } catch (UserNotFoundException e) {
+            log.error("Error getting current groups for user", e);
+        }
+        return groups;
+    }
 
    /**
     * Add user to group. If group does not exist it will be created
