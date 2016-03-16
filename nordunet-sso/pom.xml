@@ -80,7 +80,7 @@
          <plugin>
             <groupId>com.atlassian.maven.plugins</groupId>
             <artifactId>maven-crowd-plugin</artifactId>
-            <version>4.1.7</version>
+            <version>5.1.2</version>
             <extensions>true</extensions>
             <configuration>
                <productVersion>${crowd.version}</productVersion>

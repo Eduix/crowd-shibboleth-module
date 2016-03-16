@@ -13,6 +13,7 @@
 package net.nordu.crowd.sso;
 
 import com.atlassian.config.HomeLocator;
+import com.atlassian.plugin.webresource.UrlMode;
 import com.atlassian.plugin.webresource.WebResourceManager;
 import java.io.File;
 import java.io.IOException;
@@ -91,18 +92,18 @@ public abstract class NORDUnetHtmlServlet extends HttpServlet {
 
     protected void writeHtmlStart(PrintWriter writer, String title, List<String> errors, String headInclude) {
         writer.write("<html><head><title>" + title + "</title>");
-        webResourceManager.setIncludeMode(webResourceManager.INLINE_INCLUDE_MODE);
-        webResourceManager.requireResource("com.atlassian.auiplugin:ajs", writer);
+        webResourceManager.requireResource("com.atlassian.auiplugin:ajs");
         for (String themeResource : getThemeResources()) {
             if (!StringUtils.isBlank(themeResource)) {
-                webResourceManager.requireResource(themeResource, writer);
+                webResourceManager.requireResource(themeResource);
             }
         }
         if (requiresResources()) {
             for (String resource : getRequiredResources()) {
-                webResourceManager.requireResource(resource, writer);
+                webResourceManager.requireResource(resource);
             }
         }
+        webResourceManager.includeResources(writer, UrlMode.AUTO);
         if (headInclude != null) {
             writer.write(headInclude);
         }
