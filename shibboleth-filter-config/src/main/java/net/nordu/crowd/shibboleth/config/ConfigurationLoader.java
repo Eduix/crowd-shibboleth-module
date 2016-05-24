@@ -17,6 +17,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -132,6 +133,8 @@ public class ConfigurationLoader {
                   attributeHeaders.add(header.trim());
                }
                config.setAttributeHeaders(attributeHeaders);
+            } else {
+               config.setAttributeHeaders(Collections.EMPTY_SET);
             }
 
         } catch (IOException ex) {
