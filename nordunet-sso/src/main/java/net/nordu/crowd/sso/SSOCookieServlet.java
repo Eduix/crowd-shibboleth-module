@@ -90,7 +90,7 @@ public class SSOCookieServlet extends NORDUnetHtmlServlet {
       this.mdts = mdts;
       this.propertyManager = propertyManager;
       multiDomainConfig = new MultiDomainSSOConfiguration();
-      config = ConfigurationLoader.loadConfiguration(null);
+      config = ConfigurationLoader.loadConfiguration();
    }
 
    @Override
