@@ -41,3 +41,28 @@ wget -O ShibbolethSSOFilter.properties https://raw.githubusercontent.com/Eduix/c
 ```
 
 * Edit `applicationContext-CrowdSecurity.xml` by following the instructions in the `shibboleth-filter/README.TXT` file.
+
+## Apache Shibboleth Module
+
+* Require Shibboleth authentication on the `ssocookie` servlet:
+
+```
+<Location /crowd/plugins/servlet/ssocookie>
+  AuthType shibboleth
+  Require shibboleth
+  ShibUseHeaders on
+  ShibRequestSetting requireSession 1
+</Location>
+```
+
+* Ensure the Shibboleth module is getting a `REMOTE_USER` setting.
+* Configure your `attribute-map.xml` appropriately.
+
+## Enabling
+
+* Locate the source to an Atlassian-compatible login page. For example, the Crowd demo app login page is located at `/opt/atlassian/crowd/demo-webapp/login.jsp`.
+* Add a link to login with Shibboleth. For example:
+
+```
+<p>Login with <a href="https://example.com/crowd/plugins/servlet/ssocookie?redirectTo=%2fdemo%2Fsecure%2Fconsole%2Fconsole.action">Shibboleth</a></p>
+```
