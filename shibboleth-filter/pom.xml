@@ -7,14 +7,14 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.eduix.crowd</groupId>
     <artifactId>shibboleth-filter</artifactId>
-    <version>1.0.272</version>
+    <version>1.0.2102</version>
 
     <organization>
         <name>Eduix</name>
         <url>http://www.eduix.fi/</url>
     </organization>
 
-    <name>Crowd Shibboleth filter for Crowd 2.7.2</name>
+    <name>Crowd Shibboleth filter for Crowd 2.10.2</name>
     <description>Crowd Shibboleth filter</description>
     <packaging>atlassian-plugin</packaging>
 
@@ -61,12 +61,12 @@
             <scope>provided</scope>
         </dependency-->
 
-        <dependency>
+        <!--dependency>
             <groupId>com.atlassian.crowd</groupId>
             <artifactId>crowd-integration-acegi</artifactId>
             <version>2.5.3</version>
             <scope>provided</scope>
-        </dependency>
+        </dependency-->
 
         <dependency>
             <groupId>com.atlassian.crowd</groupId>
@@ -75,12 +75,12 @@
             <scope>provided</scope>
         </dependency>
 
-        <dependency>
+        <!--dependency>
             <groupId>com.atlassian.crowd</groupId>
             <artifactId>crowd-integration-seraph25</artifactId>
             <version>${crowd.version}</version>
             <scope>provided</scope>
-        </dependency>
+        </dependency-->
 
         <dependency>
             <groupId>com.atlassian.crowd</groupId>
@@ -127,7 +127,7 @@
     </build>
 
     <properties>
-        <crowd.version>2.7.2</crowd.version>
+        <crowd.version>2.10.2</crowd.version>
         <crowd.data.version>2.0.4</crowd.data.version>
     </properties>
 

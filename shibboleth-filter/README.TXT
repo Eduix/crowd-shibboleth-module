@@ -26,7 +26,7 @@ Then add this bean definition after the authenticationProcessingFilter bean:
         <property name="securityServerClient" ref="securityServerClient"/>        
         <property name="directoryManager" ref="directoryManager"/>
         <property name="authenticationFailureHandler">
-            <bean class="com.atlassian.crowd.integration.springsecurity.UsernameStoringAuthenticationFailureHandler">
+            <bean class="com.atlassian.crowd.integration.soap.springsecurity.UsernameStoringAuthenticationFailureHandler">
                 <property name="defaultFailureUrl" value="/console/login.action?error=true"/>
             </bean>
         </property>

@@ -32,12 +32,11 @@ import com.atlassian.crowd.exception.ReadOnlyGroupException;
 import com.atlassian.crowd.exception.UserAlreadyExistsException;
 import com.atlassian.crowd.exception.UserNotFoundException;
 import com.atlassian.crowd.integration.http.HttpAuthenticator;
-import com.atlassian.crowd.integration.springsecurity.CrowdSSOAuthenticationDetails;
-import com.atlassian.crowd.integration.springsecurity.CrowdSSOAuthenticationToken;
-import com.atlassian.crowd.integration.springsecurity.CrowdSSOTokenInvalidException;
-import com.atlassian.crowd.integration.springsecurity.RequestToApplicationMapper;
-import com.atlassian.crowd.integration.springsecurity.user.CrowdUserDetails;
-import com.atlassian.crowd.integration.springsecurity.user.CrowdUserDetailsService;
+import com.atlassian.crowd.integration.soap.springsecurity.CrowdSSOAuthenticationDetails;
+import com.atlassian.crowd.integration.soap.springsecurity.CrowdSSOAuthenticationToken;
+import com.atlassian.crowd.integration.soap.springsecurity.RequestToApplicationMapper;
+import com.atlassian.crowd.integration.soap.springsecurity.user.CrowdUserDetails;
+import com.atlassian.crowd.integration.soap.springsecurity.user.CrowdUserDetailsService;
 import com.atlassian.crowd.manager.application.ApplicationAccessDeniedException;
 import com.atlassian.crowd.manager.authentication.TokenAuthenticationManager;
 import com.atlassian.crowd.manager.directory.DirectoryManager;
@@ -244,8 +243,6 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
          log.error("Error authenticating user", e);
       } catch (InvalidTokenException e) {
          log.error("Error authenticating user", e);
-      } catch (CrowdSSOTokenInvalidException e) {
-         log.error("Error authenticating user", e);
       }
 
       if (newUser || (!homeOrgUser && config.isSyncEveryLogin() && groupsChanged)) {
@@ -397,7 +394,7 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
       }
 
       ValidationFactor[] validationFactors = httpAuthenticator.getValidationFactors(request);
-
+           
       authRequest.setDetails(new CrowdSSOAuthenticationDetails(application, validationFactors));
    }
 
