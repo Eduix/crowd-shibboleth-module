@@ -21,7 +21,7 @@ import com.atlassian.crowd.exception.ObjectNotFoundException;
 import com.atlassian.crowd.exception.OperationFailedException;
 import com.atlassian.crowd.integration.Constants;
 import com.atlassian.crowd.integration.http.HttpAuthenticator;
-import com.atlassian.crowd.integration.springsecurity.CrowdSSOAuthenticationToken;
+import com.atlassian.crowd.integration.soap.springsecurity.CrowdSSOAuthenticationToken;
 import com.atlassian.crowd.manager.application.ApplicationAccessDeniedException;
 import com.atlassian.crowd.manager.application.ApplicationManager;
 import com.atlassian.crowd.manager.application.ApplicationService;

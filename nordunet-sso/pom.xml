@@ -14,8 +14,8 @@
       <url>http://www.eduix.fi/</url>
    </organization>
 
-   <name>NORDUnet Crowd 2.7.2 SSO plugin</name>
-   <description>Crowd 2.7.2 plugin containing modules for NORDUnet SSO</description>
+   <name>NORDUnet Crowd 2.9.7 SSO plugin</name>
+   <description>Crowd 2.9.7 plugin containing modules for NORDUnet SSO</description>
    <packaging>atlassian-plugin</packaging>
 
    <dependencies>
@@ -54,12 +54,12 @@
          <scope>provided</scope>
       </dependency>
 
-      <dependency>
+      <!--dependency>
          <groupId>com.atlassian.plugins</groupId>
          <artifactId>atlassian-plugins-webresource</artifactId>
          <version>${crowd.version}</version>
          <scope>provided</scope>
-      </dependency>
+      </dependency-->
 
       <dependency>
          <groupId>junit</groupId>
@@ -113,7 +113,7 @@
    </build>
 
    <properties>
-      <crowd.version>2.7.2</crowd.version>
+      <crowd.version>2.9.7</crowd.version>
       <crowd.data.version>2.0.4</crowd.data.version>
    </properties>
 
