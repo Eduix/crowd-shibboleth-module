@@ -89,6 +89,17 @@ public abstract class NORDUnetHtmlServlet extends HttpServlet {
     protected void writeHtmlStart(PrintWriter writer, String title, List<String> errors) {
         writeHtmlStart(writer, title, errors, null);
     }
+    
+    protected void writeCustomError(PrintWriter writer, String title, ServletError error, String errorText) {
+       writeHtmlStart(writer, title, Collections.singletonList(errorText));
+       String errorFragment = getHtmlFragment(error.getFragment());
+       if(errorFragment != null) {
+          writer.write(errorFragment);
+       } else {
+          writer.write(error.getDefaultContent());
+       }
+       writeHtmlEnd(writer);
+    }
 
     protected void writeHtmlStart(PrintWriter writer, String title, List<String> errors, String headInclude) {
         writer.write("<html><head><title>" + title + "</title>");

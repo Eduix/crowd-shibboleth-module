@@ -41,6 +41,7 @@ import java.io.PrintWriter;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.rmi.RemoteException;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -95,7 +96,7 @@ public class SSOCookieServlet extends NORDUnetHtmlServlet {
 
    @Override
    protected void doGet(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
-      String requestedApplicationName = clientProperties.getApplicationName();
+      String requestedApplicationName = null;
       String originalRequestUrl = req.getParameter("redirectTo");
       UserAuthenticationContext authCtx = new UserAuthenticationContext();
       String username = UsernameUtil.getFinalUsername(req.getHeader("REMOTE_USER"), config);
@@ -137,6 +138,23 @@ public class SSOCookieServlet extends NORDUnetHtmlServlet {
          }
       } catch (MalformedURLException e) {
       }
+      if (originalRequestUrl == null || originalRequestUrl.trim().length() == 0) {
+         requestedApplicationName = clientProperties.getApplicationName();
+      }
+
+      if (requestedApplicationName == null) {
+         res.setStatus(HttpServletResponse.SC_FORBIDDEN);
+         String error;
+         try {
+            error = "Not permitted to use service at " + (new URL(originalRequestUrl)).getHost();
+         } catch (MalformedURLException e) {
+            error = "Not permitted";
+         }
+
+         writeCustomError(res.getWriter(), error, ServletError.NOT_PERMITTED, error);
+         return;
+      }
+      log.debug("Requested application name is {} and user does seem to have access", requestedApplicationName);
 
       authCtx.setName(username);
       authCtx.setApplication(requestedApplicationName);
