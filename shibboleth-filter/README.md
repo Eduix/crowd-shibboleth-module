@@ -1,3 +1,10 @@
+# What is this?
+
+The Shibboleth filter is an authentication processing filter which is used to authenticate and populate users in Crowd
+using the HTTP headers set by Shibboleth.
+
+# Installation
+
 To install the Shibboleth filter to crowd copy the created jar file to %crowd-webapp%/WEB-INF/lib
 and modify %crowd-webapp%/WEB-INF/classes/applicationContext-CrowdSecurity.xml.
 
@@ -18,15 +25,21 @@ Add the custom filter to the chain like this:
 Then add this bean definition after the authenticationProcessingFilter bean:
 
     <bean id="authenticationProcessingShibbolethFilter" class="net.nordu.crowd.shibboleth.ShibbolethSSOFilter">
-        <property name="httpAuthenticator" ref="httpAuthenticator"/>
+        <property name="clientProperties" ref="clientProperties"/>
+        <property name="propertyManager" ref="propertyManager"/>
+        <property name="httpTokenHelper" ref="httpTokenHelper"/>
         <property name="tokenAuthenticationManager" ref="tokenAuthenticationManager"/>
         <property name="authenticationManager" ref="authenticationManager"/>
-        <property name="crowdUserDetailsService" ref="crowdUserDetailsService"/>
+        <property name="applicationService" ref="applicationService"/>
+        <property name="applicationManager" ref="applicationManager"/>
+        <property name="userAuthoritiesProvider" ref="userAuthoritiesProvider"/>
         <property name="filterProcessesUrl" value="/console/j_security_check"/>
-        <property name="securityServerClient" ref="securityServerClient"/>        
         <property name="directoryManager" ref="directoryManager"/>
         <property name="authenticationFailureHandler">
-            <bean class="com.atlassian.crowd.integration.soap.springsecurity.UsernameStoringAuthenticationFailureHandler">
+            <bean class="com.atlassian.crowd.integration.springsecurity.UsernameStoringAuthenticationFailureHandler">
+                <constructor-arg>
+                    <util:constant static-field="com.atlassian.crowd.integration.springsecurity.SecurityConstants.USERNAME_PARAMETER"/>
+                </constructor-arg>
                 <property name="defaultFailureUrl" value="/console/login.action?error=true"/>
             </bean>
         </property>

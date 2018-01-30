@@ -7,14 +7,14 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.eduix.crowd</groupId>
     <artifactId>shibboleth-filter</artifactId>
-    <version>1.0.2102</version>
+    <version>1.1</version>
 
     <organization>
         <name>Eduix</name>
         <url>http://www.eduix.fi/</url>
     </organization>
 
-    <name>Crowd Shibboleth filter for Crowd 2.10.2</name>
+    <name>Crowd Shibboleth filter for Crowd 3.0.0+</name>
     <description>Crowd Shibboleth filter</description>
     <packaging>atlassian-plugin</packaging>
 
@@ -54,33 +54,12 @@
             <scope>provided</scope>
         </dependency>
 
-        <!--dependency>
-            <groupId>com.atlassian.crowd</groupId>
-            <artifactId>crowd-integration-client-api</artifactId>
-            <version>${crowd.version}</version>
-            <scope>provided</scope>
-        </dependency-->
-
-        <!--dependency>
-            <groupId>com.atlassian.crowd</groupId>
-            <artifactId>crowd-integration-acegi</artifactId>
-            <version>2.5.3</version>
-            <scope>provided</scope>
-        </dependency-->
-
         <dependency>
             <groupId>com.atlassian.crowd</groupId>
             <artifactId>crowd-integration-client</artifactId>
             <version>${crowd.version}</version>
             <scope>provided</scope>
         </dependency>
-
-        <!--dependency>
-            <groupId>com.atlassian.crowd</groupId>
-            <artifactId>crowd-integration-seraph25</artifactId>
-            <version>${crowd.version}</version>
-            <scope>provided</scope>
-        </dependency-->
 
         <dependency>
             <groupId>com.atlassian.crowd</groupId>
@@ -119,15 +98,15 @@
                 <artifactId>maven-compiler-plugin</artifactId>
                 <version>3.1</version>
                 <configuration>
-                    <source>1.5</source>
-                    <target>1.5</target>
+                    <source>1.8</source>
+                    <target>1.8</target>
                 </configuration>
             </plugin>
         </plugins>
     </build>
 
     <properties>
-        <crowd.version>2.10.2</crowd.version>
+        <crowd.version>3.0.0</crowd.version>
         <crowd.data.version>2.0.4</crowd.data.version>
     </properties>
 

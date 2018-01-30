@@ -15,11 +15,11 @@ package net.nordu.crowd.shibboleth;
 import com.atlassian.crowd.embedded.api.Directory;
 import com.atlassian.crowd.embedded.api.PasswordCredential;
 import com.atlassian.crowd.embedded.impl.IdentifierUtils;
+import com.atlassian.crowd.exception.ApplicationNotFoundException;
 import com.atlassian.crowd.exception.DirectoryNotFoundException;
 import com.atlassian.crowd.exception.GroupNotFoundException;
 import com.atlassian.crowd.exception.InactiveAccountException;
 import com.atlassian.crowd.exception.InvalidAuthenticationException;
-import com.atlassian.crowd.exception.InvalidAuthorizationTokenException;
 import com.atlassian.crowd.exception.InvalidCredentialException;
 import com.atlassian.crowd.exception.InvalidGroupException;
 import com.atlassian.crowd.exception.InvalidTokenException;
@@ -31,28 +31,37 @@ import com.atlassian.crowd.exception.OperationFailedException;
 import com.atlassian.crowd.exception.ReadOnlyGroupException;
 import com.atlassian.crowd.exception.UserAlreadyExistsException;
 import com.atlassian.crowd.exception.UserNotFoundException;
-import com.atlassian.crowd.integration.http.HttpAuthenticator;
-import com.atlassian.crowd.integration.soap.springsecurity.CrowdSSOAuthenticationDetails;
-import com.atlassian.crowd.integration.soap.springsecurity.CrowdSSOAuthenticationToken;
-import com.atlassian.crowd.integration.soap.springsecurity.RequestToApplicationMapper;
-import com.atlassian.crowd.integration.soap.springsecurity.user.CrowdUserDetails;
-import com.atlassian.crowd.integration.soap.springsecurity.user.CrowdUserDetailsService;
+import com.atlassian.crowd.integration.http.util.CrowdHttpTokenHelper;
+import com.atlassian.crowd.integration.springsecurity.CrowdSSOAuthenticationDetails;
+import com.atlassian.crowd.integration.springsecurity.CrowdSSOAuthenticationToken;
+import com.atlassian.crowd.integration.springsecurity.RequestToApplicationMapper;
+import com.atlassian.crowd.integration.springsecurity.user.CrowdUserDetails;
 import com.atlassian.crowd.manager.application.ApplicationAccessDeniedException;
+import com.atlassian.crowd.manager.application.ApplicationManager;
+import com.atlassian.crowd.manager.application.ApplicationService;
 import com.atlassian.crowd.manager.authentication.TokenAuthenticationManager;
 import com.atlassian.crowd.manager.directory.DirectoryManager;
 import com.atlassian.crowd.manager.directory.DirectoryPermissionException;
+import com.atlassian.crowd.manager.property.PropertyManager;
 import com.atlassian.crowd.model.authentication.UserAuthenticationContext;
 import com.atlassian.crowd.model.authentication.ValidationFactor;
 import com.atlassian.crowd.model.group.Group;
 import com.atlassian.crowd.model.group.GroupTemplate;
 import com.atlassian.crowd.model.group.GroupType;
+import com.atlassian.crowd.model.group.GroupWithAttributes;
 import com.atlassian.crowd.model.token.Token;
 import com.atlassian.crowd.model.user.User;
 import com.atlassian.crowd.model.user.UserTemplate;
-import com.atlassian.crowd.service.soap.client.SecurityServerClient;
+import com.atlassian.crowd.search.EntityDescriptor;
+import com.atlassian.crowd.search.builder.QueryBuilder;
+import com.atlassian.crowd.search.query.entity.restriction.MatchMode;
+import com.atlassian.crowd.search.query.entity.restriction.TermRestriction;
+import com.atlassian.crowd.search.query.entity.restriction.constants.UserTermKeys;
+import com.atlassian.crowd.search.query.membership.MembershipQuery;
+import com.atlassian.crowd.service.client.ClientProperties;
+import com.atlassian.crowd.user.UserAuthoritiesProvider;
 import java.io.File;
 import java.io.IOException;
-import java.rmi.RemoteException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
@@ -60,8 +69,10 @@ import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
@@ -80,12 +91,12 @@ import org.apache.commons.lang.StringUtils;
 import org.bouncycastle.util.encoders.Base64;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.dao.DataAccessException;
 import org.springframework.security.authentication.AbstractAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.AbstractAuthenticationProcessingFilter;
 import org.springframework.security.web.savedrequest.DefaultSavedRequest;
 import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
@@ -100,10 +111,13 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
 
    private static final Logger log = LoggerFactory.getLogger(ShibbolethSSOFilter.class);
    private static final String HOME_ORG_USER = "net.nordu.crowd.shibboleth.homeOrgUser";
-   private HttpAuthenticator httpAuthenticator;
+   private ClientProperties clientProperties;
+   private PropertyManager propertyManager;
+   private CrowdHttpTokenHelper httpTokenHelper;
    private RequestToApplicationMapper requestToApplicationMapper;
-   private CrowdUserDetailsService crowdUserDetailsService;
-   private SecurityServerClient securityServerClient;
+   private ApplicationService applicationService;
+   private ApplicationManager applicationManager;
+   private UserAuthoritiesProvider userAuthoritiesProvider;
    private TokenAuthenticationManager tokenAuthenticationManager;
    private DirectoryManager directoryManager;
    private static Configuration config;
@@ -147,7 +161,7 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
       CrowdUserDetails userDetails = null;
       boolean groupsChanged = false;
       try {
-         userDetails = crowdUserDetailsService.loadUserByUsername(username);
+         userDetails = loadUserByUsername(username);
          // User attributes and groups are not updated for home organization users
          if (!homeOrgUser) {
             try {
@@ -158,13 +172,13 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
                log.error("Could not find user directory {}", config.getDirectoryName());
             }
          }
-      } catch (UsernameNotFoundException e) {
+      } catch (UserNotFoundException e) {
          if (homeOrgUser) {
             log.error("User presumed to be found from LDAP could not be found", e);
             return null;
          }
          // Otherwise no need to respond here, the user is created a few lines down
-      } catch (DataAccessException e) {
+      } catch (ApplicationNotFoundException e) {
          // Not sure in which case this can come up while the system is
          // working correctly 
          log.error("Error loading user by username", e);
@@ -190,7 +204,7 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
             if (!homeOrgUser) {
                try {
                   Directory directory = directoryManager.findDirectoryByName(config.getDirectoryName());
-                  updateUserGroups(username, request, directory);                 
+                  updateUserGroups(username, request, directory);
                } catch (DirectoryNotFoundException e) {
                   log.error("Could not find user directory {}", config.getDirectoryName());
                }
@@ -210,17 +224,18 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
          }
       }
       UserAuthenticationContext authCtx = new UserAuthenticationContext();
-      authCtx.setApplication(httpAuthenticator.getSoapClientProperties().getApplicationName());
+      authCtx.setApplication(clientProperties.getApplicationName());
       authCtx.setName(username);
-      ValidationFactor[] validationFactors = httpAuthenticator.getValidationFactors(request);
-      authCtx.setValidationFactors(validationFactors);
+      List<ValidationFactor> validationFactors = httpTokenHelper.getValidationFactorExtractor().getValidationFactors(request);
+      ValidationFactor[] validationFactorArray = validationFactors.toArray(new ValidationFactor[0]);
+      authCtx.setValidationFactors(validationFactorArray);
 
       if (log.isTraceEnabled()) {
          log.trace("Trying to log in as {} without a password", username);
       }
       try {
          Token token = tokenAuthenticationManager.authenticateUserWithoutValidatingPassword(authCtx);
-         token = tokenAuthenticationManager.validateUserToken(token.getRandomHash(), validationFactors, httpAuthenticator.getSoapClientProperties().getApplicationName());
+         token = tokenAuthenticationManager.validateUserToken(token.getRandomHash(), validationFactorArray, clientProperties.getApplicationName());
          CrowdSSOAuthenticationToken crowdAuthRequest = new CrowdSSOAuthenticationToken(token.getRandomHash());
          doSetDetails(request, crowdAuthRequest);
 
@@ -229,20 +244,10 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
             log.debug("Authentication: principal {} credentials {} isAuthenticated {}", newAuth.getPrincipal(), newAuth.getCredentials(), newAuth.isAuthenticated());
          }
          SecurityContextHolder.getContext().setAuthentication(newAuth);
-      } catch (InvalidAuthenticationException e) {
-         log.error("Error authenticating user", e);
-      } catch (InactiveAccountException e) {
+      } catch (InvalidAuthenticationException | InactiveAccountException | ApplicationAccessDeniedException | OperationFailedException | ObjectNotFoundException | InvalidTokenException e) {
          log.error("Error authenticating user", e);
       } catch (NullPointerException e) {
          log.error(e.getMessage(), e);
-      } catch (ApplicationAccessDeniedException e) {
-         log.error("Error authenticating user", e);
-      } catch (OperationFailedException e) {
-         log.error("Error authenticating user", e);
-      } catch (ObjectNotFoundException e) {
-         log.error("Error authenticating user", e);
-      } catch (InvalidTokenException e) {
-         log.error("Error authenticating user", e);
       }
 
       if (newUser || (!homeOrgUser && config.isSyncEveryLogin() && groupsChanged)) {
@@ -255,9 +260,9 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
             for (String url : config.getAllUrls()) {
                GetMethod get = new GetMethod(url);
                get.setQueryString(new NameValuePair[]{
-                          new NameValuePair("username", username),
-                          new NameValuePair("password", newUserPassword)
-                       });
+                  new NameValuePair("username", username),
+                  new NameValuePair("password", newUserPassword)
+               });
                get.getParams().setParameter(HttpMethodParams.SO_TIMEOUT, 5000);
                try {
                   int statusCode = client.executeMethod(get);
@@ -281,15 +286,12 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
    }
 
    /**
-    * This filter will process all requests and check for Shibboleth headers to
-    * determine if user is logged in. If the user is logged in but a user
-    * account does not exist in Crowd one will be made.
+    * This filter will process all requests and check for Shibboleth headers to determine if user is logged in. If the
+    * user is logged in but a user account does not exist in Crowd one will be made.
     *
-    * @param request servlet request containing either username/password
-    * paramaters or the Crowd token as a cookie.
+    * @param request servlet request containing either username/password paramaters or the Crowd token as a cookie.
     * @param response servlet response to write out cookie.
-    * @return <code>true</code> only if the filterProcessesUrl is in the request
-    * URI.
+    * @return <code>true</code> only if the filterProcessesUrl is in the request URI.
     */
    @Override
    protected boolean requiresAuthentication(final HttpServletRequest request, final HttpServletResponse response) {
@@ -308,9 +310,9 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
                  + "not match username in request! Logging user out");
          try {
             SecurityContextHolder.clearContext();
-            httpAuthenticator.logoff(request, response);
+            tokenAuthenticationManager.invalidateToken(httpTokenHelper.getCrowdToken(request, propertyManager.getCookieConfiguration().getName()));
          } catch (Exception e) {
-            logger.error("Could not logout SSO user from Crowd", e);
+            log.error("Could not logout SSO user from Crowd", e);
             return true;
          }
          return !StringUtils.isBlank(username);
@@ -335,21 +337,11 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
          template.setDisplayName(firstname + " " + lastname);
          template.setActive(Boolean.TRUE);
          directoryManager.addUser(directory.getId(), template, new PasswordCredential(password, false));
-                     if(!attributes.isEmpty()) {               
-               directoryManager.storeUserAttributes(directory.getId(), username, attributes);
-            }
+         if (!attributes.isEmpty()) {
+            directoryManager.storeUserAttributes(directory.getId(), username, attributes);
+         }
          return true;
-      } catch (DirectoryNotFoundException e) {
-         log.error("Error creating new user", e);
-      } catch (DirectoryPermissionException e) {
-         log.error("Error creating new user", e);
-      } catch (InvalidCredentialException e) {
-         log.error("Error creating new user", e);
-      } catch (InvalidUserException e) {
-         log.error("Error creating new user", e);
-      } catch (OperationFailedException e) {
-         log.error("Error creating new user", e);
-      } catch (UserAlreadyExistsException e) {
+      } catch (DirectoryNotFoundException | DirectoryPermissionException | InvalidCredentialException | InvalidUserException | OperationFailedException | UserAlreadyExistsException e) {
          log.error("Error creating new user", e);
       } catch (UserNotFoundException e) {
          log.error("Error setting attributes for new user", e);
@@ -360,7 +352,7 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
    private String randomPassword() {
 
       //generate a random number
-      String randomNum = new Integer(prng.nextInt()).toString();
+      String randomNum = Integer.toString(prng.nextInt());
 
       //get its digest
       byte[] result = sha.digest(randomNum.getBytes());
@@ -390,27 +382,25 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
          application = requestToApplicationMapper.getApplication(path);
       } else {
          // default to the "crowd" application
-         application = httpAuthenticator.getSoapClientProperties().getApplicationName();
+         application = clientProperties.getApplicationName();
       }
 
-      ValidationFactor[] validationFactors = httpAuthenticator.getValidationFactors(request);
-           
+      List<ValidationFactor> validationFactors = httpTokenHelper.getValidationFactorExtractor().getValidationFactors(request);
+
       authRequest.setDetails(new CrowdSSOAuthenticationDetails(application, validationFactors));
    }
 
    /**
-    * Attempts to write out the successful SSO token to a cookie, if an SSO
-    * token was generated and stored via the AuthenticationProvider.
+    * Attempts to write out the successful SSO token to a cookie, if an SSO token was generated and stored via the
+    * AuthenticationProvider.
     *
-    * This effectively establishes SSO when using the
-    * CrowdAuthenticationProvider in conjunction with this filter.
+    * This effectively establishes SSO when using the CrowdAuthenticationProvider in conjunction with this filter.
     *
     * @param request servlet request.
     * @param response servlet response.
     * @param chain filter chain
-    * @param authResult result of a successful authentication. If it is a
-    * CrowdSSOAuthenticationToken then the SSO token will be set to the
-    * "credentials" property.
+    * @param authResult result of a successful authentication. If it is a CrowdSSOAuthenticationToken then the SSO token
+    * will be set to the "credentials" property.
     * @throws java.io.IOException not thrown.
     */
    @Override
@@ -419,10 +409,10 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
       if (authResult instanceof CrowdSSOAuthenticationToken) {
          if (authResult.getCredentials() != null) {
             try {
-               httpAuthenticator.setPrincipalToken(request, response, authResult.getCredentials().toString());
+               httpTokenHelper.setCrowdToken(request, response, authResult.getCredentials().toString(), clientProperties, propertyManager.getCookieConfiguration());
             } catch (Exception e) {
                // occurs if application's auth token expires while trying to look up the domain property from the Crowd server
-               logger.error("Unable to set Crowd SSO token", e);
+               log.error("Unable to set Crowd SSO token", e);
             }
          }
       }
@@ -457,37 +447,37 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
          mutableUser.setDisplayName(firstName + " " + lastName);
          directoryManager.updateUser(directory.getId(), mutableUser);
          Map<String, Set<String>> attributesFromHeaders = getUserAttributesFromHeaders(request);
-         if(!attributesFromHeaders.isEmpty()) {
+         if (!attributesFromHeaders.isEmpty()) {
             log.debug("Storing user attributes {}", attributesFromHeaders);
             directoryManager.storeUserAttributes(directory.getId(), username, attributesFromHeaders);
-         }         
+         }
       } catch (UserNotFoundException e) {
          log.error("Could not find user to update attributes");
-      } catch (Exception e) {
+      } catch (DirectoryNotFoundException | InvalidUserException | OperationFailedException | DirectoryPermissionException e) {
          log.error("Could not update user attributes", e);
       }
    }
-   
-    private Map<String, Set<String>> getUserAttributesFromHeaders(HttpServletRequest request) {
-       Map<String, Set<String>> attributesFromHeaders = new HashMap<String,Set<String>>();
-       Enumeration headerValues;
-       String value;
-       Set<String> valueSet;       
-       for (String headerName : config.getAttributeHeaders()) {          
-          valueSet = new HashSet<String>();
-          headerValues = request.getHeaders(headerName);
-          while(headerValues.hasMoreElements()) {             
-             value = (String)headerValues.nextElement();             
-             if(!StringUtils.isBlank(value)) {
-                valueSet.add(value);
-             }
-          }
-          if(!valueSet.isEmpty()) {
-             attributesFromHeaders.put(headerName, valueSet);
-          }
-       }
-       return attributesFromHeaders;
-    }   
+
+   private Map<String, Set<String>> getUserAttributesFromHeaders(HttpServletRequest request) {
+      Map<String, Set<String>> attributesFromHeaders = new HashMap<String, Set<String>>();
+      Enumeration headerValues;
+      String value;
+      Set<String> valueSet;
+      for (String headerName : config.getAttributeHeaders()) {
+         valueSet = new HashSet<String>();
+         headerValues = request.getHeaders(headerName);
+         while (headerValues.hasMoreElements()) {
+            value = (String) headerValues.nextElement();
+            if (!StringUtils.isBlank(value)) {
+               valueSet.add(value);
+            }
+         }
+         if (!valueSet.isEmpty()) {
+            attributesFromHeaders.put(headerName, valueSet);
+         }
+      }
+      return attributesFromHeaders;
+   }
 
    private void updateUserPassword(String username, String password, Directory directory) {
       try {
@@ -549,7 +539,7 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
          }
       }
       mappedGroups.removeAll(groupsFromHeaders);
-      candidatesForPurging.retainAll(mappedGroups);      
+      candidatesForPurging.retainAll(mappedGroups);
       for (String groupToPurge : candidatesForPurging) {
          if (log.isDebugEnabled()) {
             log.debug("Removing user from group {}", groupToPurge);
@@ -557,41 +547,24 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
          try {
             directoryManager.removeUserFromGroup(directory.getId(), username, groupToPurge);
             groupsChanged = true;
-         } catch (DirectoryPermissionException e) {
-            log.error("Could not remove user from group {}", groupToPurge, e);
-         } catch (DirectoryNotFoundException e) {
-            log.error("Could not remove user from group {}", groupToPurge, e);
-         } catch (GroupNotFoundException e) {
-            log.error("Could not remove user from group {}", groupToPurge, e);
-         } catch (MembershipNotFoundException e) {
-            log.error("Could not remove user from group {}", groupToPurge, e);
-         } catch (OperationFailedException e) {
-            log.error("Could not remove user from group {}", groupToPurge, e);
-         } catch (ReadOnlyGroupException e) {
-            log.error("Could not remove user from group {}", groupToPurge, e);
-         } catch (UserNotFoundException e) {
+         } catch (DirectoryPermissionException | DirectoryNotFoundException | GroupNotFoundException | MembershipNotFoundException | OperationFailedException | ReadOnlyGroupException | UserNotFoundException e) {
             log.error("Could not remove user from group {}", groupToPurge, e);
          }
       }
       return groupsChanged;
    }
 
-    private Set<String> getCurrentGroupsForUser(String username) {       
-        Set<String> groups = new HashSet<String>();
-        try {
-            String[] groupMemberships = securityServerClient.findGroupMemberships(username);
-            groups.addAll(Arrays.asList(groupMemberships));
-        } catch (RemoteException e) {
-            log.error("Error getting current groups for user", e);
-        } catch (InvalidAuthorizationTokenException e) {
-            log.error("Error getting current groups for user", e);
-        } catch (InvalidAuthenticationException e) {
-            log.error("Error getting current groups for user", e);
-        } catch (UserNotFoundException e) {
-            log.error("Error getting current groups for user", e);
-        }
-        return groups;
-    }
+   private Set<String> getCurrentGroupsForUser(String username) {
+      Set<String> groups = new HashSet<>();
+      try {
+         MembershipQuery<GroupWithAttributes> query = QueryBuilder.createMembershipQuery(5000, 0, false, EntityDescriptor.group(), GroupWithAttributes.class, EntityDescriptor.user(), new TermRestriction(UserTermKeys.USERNAME, MatchMode.EXACTLY_MATCHES, username));
+         List<GroupWithAttributes> searchDirectGroupRelationships = applicationService.searchDirectGroupRelationships(applicationManager.findByName(clientProperties.getApplicationName()), query);
+         groups.addAll(searchDirectGroupRelationships.stream().map(g -> g.getName()).collect(Collectors.toList()));
+      } catch (ApplicationNotFoundException e) {
+         log.error("Error getting current groups for user", e);
+      }
+      return groups;
+   }
 
    /**
     * Add user to group. If group does not exist it will be created
@@ -609,18 +582,10 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
             directoryManager.addUserToGroup(directory.getId(), username, groupName);
             return true;
          }
-      } catch (DirectoryNotFoundException e) {
+      } catch (DirectoryNotFoundException | UserNotFoundException | DirectoryPermissionException | OperationFailedException | ReadOnlyGroupException e) {
          log.error("Could not add user {} to group {}", username, groupName, e);
       } catch (GroupNotFoundException e) {
          log.debug("Could not find group {}. Will try creating it", groupName);
-      } catch (UserNotFoundException e) {
-         log.error("Could not add user {} to group {}", username, groupName, e);
-      } catch (DirectoryPermissionException e) {
-         log.error("Could not add user {} to group {}", username, groupName, e);
-      } catch (OperationFailedException e) {
-         log.error("Could not add user {} to group {}", username, groupName, e);
-      } catch (ReadOnlyGroupException e) {
-         log.error("Could not add user {} to group {}", username, groupName, e);
       } catch (MembershipAlreadyExistsException e) {
          log.error("User {} is already a member of group {}", username, groupName);
       }
@@ -635,23 +600,29 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
             return true;
          } catch (InvalidGroupException e) {
             log.error("Could not add group {}", groupName, e);
-         } catch (GroupNotFoundException e) {
-            log.error("Could not add user {} to group {}", username, groupName, e);
-         } catch (UserNotFoundException e) {
-            log.error("Could not add user {} to group {}", username, groupName, e);
-         } catch (DirectoryNotFoundException e) {
-            log.error("Could not add user {} to group {}", username, groupName, e);
-         } catch (DirectoryPermissionException e) {
-            log.error("Could not add user {} to group {}", username, groupName, e);
-         } catch (OperationFailedException e) {
-            log.error("Could not add user {} to group {}", username, groupName, e);
-         } catch (ReadOnlyGroupException e) {
+         } catch (GroupNotFoundException | UserNotFoundException | DirectoryNotFoundException | DirectoryPermissionException | OperationFailedException | ReadOnlyGroupException e) {
             log.error("Could not add user {} to group {}", username, groupName, e);
          } catch (MembershipAlreadyExistsException e) {
             log.error("User {} is already a member of group {}", username, groupName);
          }
       }
       return false;
+   }
+
+   /**
+    * Get user details by username from the Crowd application. Can't use CrowdAuthenticationProvider as the method is
+    * private so duplicating functionality
+    */
+   private CrowdUserDetails loadUserByUsername(String username) throws UserNotFoundException, ApplicationNotFoundException {
+      User user = applicationService.findUserByName(applicationManager.findByName(clientProperties.getApplicationName()), username);
+      return new CrowdUserDetails(user, Arrays.asList(findGrantedAuthorities(username)));
+   }
+
+   private GrantedAuthority[] findGrantedAuthorities(String username) throws ApplicationNotFoundException {
+      return userAuthoritiesProvider.getAuthorityNames(username)
+              .stream()
+              .map(SimpleGrantedAuthority::new)
+              .toArray(GrantedAuthority[]::new);
    }
 
    /**
@@ -676,16 +647,28 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
       }
    }
 
-   public void setHttpAuthenticator(HttpAuthenticator httpAuthenticator) {
-      this.httpAuthenticator = httpAuthenticator;
+   public void setClientProperties(ClientProperties clientProperties) {
+      this.clientProperties = clientProperties;
    }
 
-   public void setSecurityServerClient(SecurityServerClient securityServerClient) {
-      this.securityServerClient = securityServerClient;
+   public void setPropertyManager(PropertyManager propertyManager) {
+      this.propertyManager = propertyManager;
    }
 
-   public void setCrowdUserDetailsService(CrowdUserDetailsService crowdUserDetailsService) {
-      this.crowdUserDetailsService = crowdUserDetailsService;
+   public void setHttpTokenHelper(CrowdHttpTokenHelper httpTokenHelper) {
+      this.httpTokenHelper = httpTokenHelper;
+   }
+
+   public void setApplicationService(ApplicationService applicationService) {
+      this.applicationService = applicationService;
+   }
+
+   public void setApplicationManager(ApplicationManager applicationManager) {
+      this.applicationManager = applicationManager;
+   }
+
+   public void setUserAuthoritiesProvider(UserAuthoritiesProvider userAuthoritiesProvider) {
+      this.userAuthoritiesProvider = userAuthoritiesProvider;
    }
 
    public void setTokenAuthenticationManager(TokenAuthenticationManager tokenAuthenticationManager) {
@@ -699,9 +682,8 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
    /**
     * Optional dependency.
     *
-    * @param requestToApplicationMapper only required if multiple Crowd
-    * "applications" need to be accessed via the same Spring Security context,
-    * eg. when one web-application corresponds to multiple Crowd "applications".
+    * @param requestToApplicationMapper only required if multiple Crowd "applications" need to be accessed via the same
+    * Spring Security context, eg. when one web-application corresponds to multiple Crowd "applications".
     */
    public void setRequestToApplicationMapper(RequestToApplicationMapper requestToApplicationMapper) {
       this.requestToApplicationMapper = requestToApplicationMapper;
