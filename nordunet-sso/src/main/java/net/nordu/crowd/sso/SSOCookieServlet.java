@@ -16,32 +16,28 @@ import com.atlassian.config.HomeLocator;
 import com.atlassian.crowd.exception.DirectoryNotFoundException;
 import com.atlassian.crowd.exception.InactiveAccountException;
 import com.atlassian.crowd.exception.InvalidAuthenticationException;
-import com.atlassian.crowd.exception.InvalidAuthorizationTokenException;
 import com.atlassian.crowd.exception.ObjectNotFoundException;
 import com.atlassian.crowd.exception.OperationFailedException;
 import com.atlassian.crowd.integration.Constants;
 import com.atlassian.crowd.integration.http.HttpAuthenticator;
-import com.atlassian.crowd.integration.soap.springsecurity.CrowdSSOAuthenticationToken;
+import com.atlassian.crowd.integration.http.util.CrowdHttpTokenHelper;
+import com.atlassian.crowd.integration.springsecurity.CrowdSSOAuthenticationToken;
 import com.atlassian.crowd.manager.application.ApplicationAccessDeniedException;
 import com.atlassian.crowd.manager.application.ApplicationManager;
 import com.atlassian.crowd.manager.application.ApplicationService;
 import com.atlassian.crowd.manager.authentication.TokenAuthenticationManager;
 import com.atlassian.crowd.manager.property.PropertyManager;
-import com.atlassian.crowd.manager.property.PropertyManagerException;
 import com.atlassian.crowd.model.application.Application;
 import com.atlassian.crowd.model.application.RemoteAddress;
 import com.atlassian.crowd.model.authentication.UserAuthenticationContext;
 import com.atlassian.crowd.model.authentication.ValidationFactor;
 import com.atlassian.crowd.model.user.User;
 import com.atlassian.crowd.service.client.ClientProperties;
-import com.atlassian.crowd.service.soap.client.SecurityServerClient;
 import com.atlassian.plugin.webresource.WebResourceManager;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.rmi.RemoteException;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -67,29 +63,25 @@ public class SSOCookieServlet extends NORDUnetHtmlServlet {
    private static final Logger log = LoggerFactory.getLogger(SSOCookieServlet.class);
    private final ApplicationService applicationService;
    private final ApplicationManager applicationManager;
-   private final SecurityServerClient securityServerClient;
    private final TokenAuthenticationManager tokenAuthenticationManager;
-   private final HttpAuthenticator httpAuthenticator;
-   private final ClientProperties clientProperties;
    private final MultiDomainTokenService mdts;
    private final MultiDomainSSOConfiguration multiDomainConfig;
+   private final CrowdHttpTokenHelper httpTokenHelper;
    private final PropertyManager propertyManager;
    private volatile Configuration config;
    public static final String REDIRECT_ATTRIBUTE = "ssocookie.redirect";
 
    public SSOCookieServlet(ApplicationService applicationService, ApplicationManager applicationManager,
-           SecurityServerClient securityServerClient, TokenAuthenticationManager tokenAuthenticationManager,
-           HttpAuthenticator httpAuthenticator, ClientProperties clientProperties, WebResourceManager webResourceManager,
-           MultiDomainTokenService mdts, HomeLocator homeLocator, PropertyManager propertyManager) {
+           TokenAuthenticationManager tokenAuthenticationManager, WebResourceManager webResourceManager,
+           MultiDomainTokenService mdts, HomeLocator homeLocator, PropertyManager propertyManager,
+           CrowdHttpTokenHelper httpTokenHelper) {
       super(webResourceManager, homeLocator);
       this.applicationService = applicationService;
       this.applicationManager = applicationManager;
-      this.securityServerClient = securityServerClient;
       this.tokenAuthenticationManager = tokenAuthenticationManager;
-      this.httpAuthenticator = httpAuthenticator;
-      this.clientProperties = clientProperties;
       this.mdts = mdts;
       this.propertyManager = propertyManager;
+      this.httpTokenHelper = httpTokenHelper;
       multiDomainConfig = new MultiDomainSSOConfiguration();
       config = ConfigurationLoader.loadConfiguration();
    }
@@ -112,7 +104,7 @@ public class SSOCookieServlet extends NORDUnetHtmlServlet {
       List<Application> applications = null;
       boolean hasEmailAddress = false;
       try {
-         final User user = applicationService.findUserByName(applicationManager.findByName(clientProperties.getApplicationName()), username);
+         final User user = applicationService.findUserByName(applicationManager.findByName("crowd"), username);
          applications = tokenAuthenticationManager.findAuthorisedApplications(user, "crowd");
          hasEmailAddress = !StringUtils.isBlank(user.getEmailAddress());
       } catch (ObjectNotFoundException e) {
@@ -139,7 +131,7 @@ public class SSOCookieServlet extends NORDUnetHtmlServlet {
       } catch (MalformedURLException e) {
       }
       if (originalRequestUrl == null || originalRequestUrl.trim().length() == 0) {
-         requestedApplicationName = clientProperties.getApplicationName();
+         requestedApplicationName = "crowd";
       }
 
       if (requestedApplicationName == null) {
@@ -159,7 +151,7 @@ public class SSOCookieServlet extends NORDUnetHtmlServlet {
       authCtx.setName(username);
       authCtx.setApplication(requestedApplicationName);
 
-      ValidationFactor[] validationFactors = httpAuthenticator.getValidationFactors(req);
+      ValidationFactor[] validationFactors = httpTokenHelper.getValidationFactorExtractor().getValidationFactors(req).toArray(new ValidationFactor[0]);
       authCtx.setValidationFactors(validationFactors);
       CrowdSSOAuthenticationToken crowdAuthRequest = null;
       try {
@@ -250,8 +242,7 @@ public class SSOCookieServlet extends NORDUnetHtmlServlet {
    }
 
    /**
-    * Creates the cookie and sets attributes such as path, domain, and "secure"
-    * flag.
+    * Creates the cookie and sets attributes such as path, domain, and "secure" flag.
     *
     * @param token The SSO token to be included in the cookie
     */
@@ -260,25 +251,12 @@ public class SSOCookieServlet extends NORDUnetHtmlServlet {
 
       // path
       tokenCookie.setPath(Constants.COOKIE_PATH);
-      try {
-         // domain
-         if (securityServerClient.getCookieInfo().getDomain() != null) {
-            tokenCookie.setDomain(securityServerClient.getCookieInfo().getDomain());
-         }
-      } catch (RemoteException e) {
-         log.error("Error getting domain from the security server client", e);
-      } catch (InvalidAuthorizationTokenException e) {
-         log.error("Error getting domain from the security server client", e);
-      } catch (InvalidAuthenticationException e) {
-         log.error("Error getting domain from the security server client", e);
+      // domain
+      if (propertyManager.getCookieConfiguration().getDomain() != null) {
+         tokenCookie.setDomain(propertyManager.getCookieConfiguration().getDomain());
       }
 
-      try {
-         tokenCookie.setSecure(propertyManager.isSecureCookie());
-      } catch (PropertyManagerException e) {
-         log.warn("Error setting secure property of cookie", e);
-         tokenCookie.setSecure(Boolean.FALSE);
-      }
+      tokenCookie.setSecure(propertyManager.getCookieConfiguration().isSecure());
 
       return tokenCookie;
    }
@@ -299,7 +277,7 @@ public class SSOCookieServlet extends NORDUnetHtmlServlet {
    }
 
    public String getCookieTokenKey() {
-      return clientProperties.getCookieTokenKey();
+      return propertyManager.getCookieConfiguration().getName();
    }
 
    @Override

@@ -14,8 +14,6 @@ package net.nordu.crowd.sso;
 
 import com.atlassian.crowd.integration.Constants;
 import com.atlassian.crowd.manager.property.PropertyManager;
-import com.atlassian.crowd.manager.property.PropertyManagerException;
-import com.atlassian.crowd.service.client.ClientProperties;
 import java.io.IOException;
 import javax.servlet.ServletException;
 import javax.servlet.http.Cookie;
@@ -44,12 +42,10 @@ public class SetSSOCookieServlet extends HttpServlet {
     */
    private static final String PIXEL_B64 = "R0lGODlhAQABAPAAAAAAAAAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==";
    private static final byte[] PIXEL_BYTES = Base64.decode(PIXEL_B64);
-   private final ClientProperties clientProperties;
    private final PropertyManager propertyManager;
    private final MultiDomainTokenService mdts;
 
-   public SetSSOCookieServlet(ClientProperties clientProperties, MultiDomainTokenService mdts, PropertyManager propertyManager) {
-      this.clientProperties = clientProperties;
+   public SetSSOCookieServlet(MultiDomainTokenService mdts, PropertyManager propertyManager) {
       this.mdts = mdts;
       this.propertyManager = propertyManager;
    }
@@ -59,18 +55,13 @@ public class SetSSOCookieServlet extends HttpServlet {
       String tokenString = req.getParameter("token");
       try {
          Token token = mdts.consumeToken(tokenString);
-         Cookie cookie = new Cookie(clientProperties.getCookieTokenKey(), token.getCookieToken());
+         Cookie cookie = new Cookie(propertyManager.getCookieConfiguration().getName(), token.getCookieToken());
          cookie.setPath(Constants.COOKIE_PATH);
          String domain = dropSubDomainFromHost(req);
          if (domain != null) {
             cookie.setDomain(domain);
          }
-         try {
-            cookie.setSecure(propertyManager.isSecureCookie());
-         } catch (PropertyManagerException e) {
-            log.warn("Error setting secure property of cookie", e);
-            cookie.setSecure(Boolean.FALSE);
-         }
+         cookie.setSecure(propertyManager.getCookieConfiguration().isSecure());
          resp.addCookie(cookie);
       } catch (InvalidTokenException e) {
          log.warn("Invalid token found: {}", e.getMessage());
@@ -83,7 +74,7 @@ public class SetSSOCookieServlet extends HttpServlet {
       resp.setHeader("Cache-Control", "private, no-store, no-cache, must-revalidate");
       // Set standard HTTP/1.0 no-cache header
       resp.setHeader("Pragma", "no-cache");
-      resp.setContentType("image/gif");            
+      resp.setContentType("image/gif");
       resp.getOutputStream().write(PIXEL_BYTES);
    }
 
