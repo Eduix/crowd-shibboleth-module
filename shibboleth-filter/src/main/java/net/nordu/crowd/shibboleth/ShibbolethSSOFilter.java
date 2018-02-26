@@ -54,9 +54,7 @@ import com.atlassian.crowd.model.user.User;
 import com.atlassian.crowd.model.user.UserTemplate;
 import com.atlassian.crowd.search.EntityDescriptor;
 import com.atlassian.crowd.search.builder.QueryBuilder;
-import com.atlassian.crowd.search.query.entity.restriction.MatchMode;
-import com.atlassian.crowd.search.query.entity.restriction.TermRestriction;
-import com.atlassian.crowd.search.query.entity.restriction.constants.UserTermKeys;
+import com.atlassian.crowd.search.query.entity.restriction.NullRestrictionImpl;
 import com.atlassian.crowd.search.query.membership.MembershipQuery;
 import com.atlassian.crowd.service.client.ClientProperties;
 import com.atlassian.crowd.user.UserAuthoritiesProvider;
@@ -557,7 +555,7 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
    private Set<String> getCurrentGroupsForUser(String username) {
       Set<String> groups = new HashSet<>();
       try {
-         MembershipQuery<GroupWithAttributes> query = QueryBuilder.createMembershipQuery(5000, 0, false, EntityDescriptor.group(), GroupWithAttributes.class, EntityDescriptor.user(), new TermRestriction(UserTermKeys.USERNAME, MatchMode.EXACTLY_MATCHES, username));
+         MembershipQuery<GroupWithAttributes> query = QueryBuilder.createMembershipQuery(5000, 0, false, EntityDescriptor.group(), GroupWithAttributes.class, EntityDescriptor.user(), NullRestrictionImpl.INSTANCE, username);
          List<GroupWithAttributes> searchDirectGroupRelationships = applicationService.searchDirectGroupRelationships(applicationManager.findByName(clientProperties.getApplicationName()), query);
          groups.addAll(searchDirectGroupRelationships.stream().map(g -> g.getName()).collect(Collectors.toList()));
       } catch (ApplicationNotFoundException e) {
