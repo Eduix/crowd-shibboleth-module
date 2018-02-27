@@ -555,9 +555,12 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
    private Set<String> getCurrentGroupsForUser(String username) {
       Set<String> groups = new HashSet<>();
       try {
+         log.info("Getting current group of {}", username);
          MembershipQuery<GroupWithAttributes> query = QueryBuilder.createMembershipQuery(5000, 0, false, EntityDescriptor.group(), GroupWithAttributes.class, EntityDescriptor.user(), NullRestrictionImpl.INSTANCE, username);
+         log.info("Query: {} - {}", query, query.getEntityNameToMatch());
          List<GroupWithAttributes> searchDirectGroupRelationships = applicationService.searchDirectGroupRelationships(applicationManager.findByName(clientProperties.getApplicationName()), query);
          groups.addAll(searchDirectGroupRelationships.stream().map(g -> g.getName()).collect(Collectors.toList()));
+         log.info("Groups: {}", groups);
       } catch (ApplicationNotFoundException e) {
          log.error("Error getting current groups for user", e);
       }

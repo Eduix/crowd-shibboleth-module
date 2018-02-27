@@ -19,8 +19,10 @@ import com.atlassian.crowd.exception.InvalidAuthenticationException;
 import com.atlassian.crowd.exception.ObjectNotFoundException;
 import com.atlassian.crowd.exception.OperationFailedException;
 import com.atlassian.crowd.integration.Constants;
-import com.atlassian.crowd.integration.http.HttpAuthenticator;
 import com.atlassian.crowd.integration.http.util.CrowdHttpTokenHelper;
+import com.atlassian.crowd.integration.http.util.CrowdHttpTokenHelperImpl;
+import com.atlassian.crowd.integration.http.util.CrowdHttpValidationFactorExtractor;
+import com.atlassian.crowd.integration.http.util.CrowdHttpValidationFactorExtractorImpl;
 import com.atlassian.crowd.integration.springsecurity.CrowdSSOAuthenticationToken;
 import com.atlassian.crowd.manager.application.ApplicationAccessDeniedException;
 import com.atlassian.crowd.manager.application.ApplicationManager;
@@ -32,7 +34,6 @@ import com.atlassian.crowd.model.application.RemoteAddress;
 import com.atlassian.crowd.model.authentication.UserAuthenticationContext;
 import com.atlassian.crowd.model.authentication.ValidationFactor;
 import com.atlassian.crowd.model.user.User;
-import com.atlassian.crowd.service.client.ClientProperties;
 import com.atlassian.plugin.webresource.WebResourceManager;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -73,15 +74,15 @@ public class SSOCookieServlet extends NORDUnetHtmlServlet {
 
    public SSOCookieServlet(ApplicationService applicationService, ApplicationManager applicationManager,
            TokenAuthenticationManager tokenAuthenticationManager, WebResourceManager webResourceManager,
-           MultiDomainTokenService mdts, HomeLocator homeLocator, PropertyManager propertyManager,
-           CrowdHttpTokenHelper httpTokenHelper) {
+           MultiDomainTokenService mdts, HomeLocator homeLocator, PropertyManager propertyManager) {
       super(webResourceManager, homeLocator);
       this.applicationService = applicationService;
       this.applicationManager = applicationManager;
       this.tokenAuthenticationManager = tokenAuthenticationManager;
       this.mdts = mdts;
       this.propertyManager = propertyManager;
-      this.httpTokenHelper = httpTokenHelper;
+      CrowdHttpValidationFactorExtractor extractorImpl = CrowdHttpValidationFactorExtractorImpl.getInstance();
+      this.httpTokenHelper = CrowdHttpTokenHelperImpl.getInstance(extractorImpl);
       multiDomainConfig = new MultiDomainSSOConfiguration();
       config = ConfigurationLoader.loadConfiguration();
    }
