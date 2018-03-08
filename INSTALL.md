@@ -1,6 +1,6 @@
 # Installation
 
-Right now this only works with Crowd version 2.7.2. There are incompatible API changes in 2.9.1 (latest).
+This version works only with Crowd 3.0+ due to API changes.
 
 # Steps
 
