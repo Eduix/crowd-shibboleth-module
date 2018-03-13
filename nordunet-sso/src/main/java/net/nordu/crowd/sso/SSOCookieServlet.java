@@ -120,12 +120,14 @@ public class SSOCookieServlet extends NORDUnetHtmlServlet {
       // Try to guess the application we want to set the cookie for
       try {
          reqURL = new URL(originalRequestUrl);
-         for (Application app : applications) {
-            Set<RemoteAddress> remoteAddresses = app.getRemoteAddresses();
-            for (RemoteAddress address : remoteAddresses) {
-               if (address.getAddress().equals(reqURL.getHost())) {
-                  requestedApplicationName = app.getName();
-                  break;
+         if (applications != null) {
+            for (Application app : applications) {
+               Set<RemoteAddress> remoteAddresses = app.getRemoteAddresses();
+               for (RemoteAddress address : remoteAddresses) {
+                  if (address.getAddress().equals(reqURL.getHost())) {
+                     requestedApplicationName = app.getName();
+                     break;
+                  }
                }
             }
          }
