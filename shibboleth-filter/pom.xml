@@ -14,7 +14,7 @@
         <url>http://www.eduix.fi/</url>
     </organization>
 
-    <name>Crowd Shibboleth filter for Crowd 3.0.0+</name>
+    <name>Crowd Shibboleth filter for Crowd 3.2.0+</name>
     <description>Crowd Shibboleth filter</description>
     <packaging>atlassian-plugin</packaging>
 
@@ -106,7 +106,7 @@
     </build>
 
     <properties>
-        <crowd.version>3.0.0</crowd.version>
+        <crowd.version>3.2.0</crowd.version>
         <crowd.data.version>2.0.4</crowd.data.version>
     </properties>
 

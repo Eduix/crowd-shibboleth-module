@@ -43,6 +43,7 @@ import com.atlassian.crowd.manager.authentication.TokenAuthenticationManager;
 import com.atlassian.crowd.manager.directory.DirectoryManager;
 import com.atlassian.crowd.manager.directory.DirectoryPermissionException;
 import com.atlassian.crowd.manager.property.PropertyManager;
+import com.atlassian.crowd.model.application.Application;
 import com.atlassian.crowd.model.authentication.UserAuthenticationContext;
 import com.atlassian.crowd.model.authentication.ValidationFactor;
 import com.atlassian.crowd.model.group.Group;
@@ -232,8 +233,9 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
          log.trace("Trying to log in as {} without a password", username);
       }
       try {
-         Token token = tokenAuthenticationManager.authenticateUserWithoutValidatingPassword(authCtx);
-         token = tokenAuthenticationManager.validateUserToken(token.getRandomHash(), validationFactorArray, clientProperties.getApplicationName());
+         Application application = applicationManager.findByName(clientProperties.getApplicationName());
+         Token token = tokenAuthenticationManager.authenticateUserWithoutValidatingPassword(application, authCtx);
+         token = tokenAuthenticationManager.validateUserToken(application, token.getRandomHash(), validationFactorArray);
          CrowdSSOAuthenticationToken crowdAuthRequest = new CrowdSSOAuthenticationToken(token.getRandomHash());
          doSetDetails(request, crowdAuthRequest);
 

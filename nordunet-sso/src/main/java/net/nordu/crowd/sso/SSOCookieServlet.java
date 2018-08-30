@@ -158,7 +158,7 @@ public class SSOCookieServlet extends NORDUnetHtmlServlet {
       authCtx.setValidationFactors(validationFactors);
       CrowdSSOAuthenticationToken crowdAuthRequest = null;
       try {
-         crowdAuthRequest = new CrowdSSOAuthenticationToken(tokenAuthenticationManager.authenticateUserWithoutValidatingPassword(authCtx).getRandomHash());
+         crowdAuthRequest = new CrowdSSOAuthenticationToken(tokenAuthenticationManager.authenticateUserWithoutValidatingPassword(applicationManager.findByName("crowd"), authCtx).getRandomHash());
       } catch (InvalidAuthenticationException e) {
          log.error("Invalid authentication", e);
          errorPage(res, e.getMessage());
