@@ -7,22 +7,22 @@
    <modelVersion>4.0.0</modelVersion>
    <groupId>net.nordu.crowd</groupId>
    <artifactId>nordunet-sso</artifactId>
-   <version>1.0</version>
+   <version>1.1</version>
 
    <organization>
       <name>Eduix</name>
       <url>http://www.eduix.fi/</url>
    </organization>
 
-   <name>NORDUnet Crowd 3.2+ SSO plugin</name>
-   <description>Crowd 3.2+ plugin containing modules for NORDUnet SSO</description>
+   <name>NORDUnet Crowd 3.7+ SSO plugin</name>
+   <description>Crowd 3.7+ plugin containing modules for NORDUnet SSO</description>
    <packaging>atlassian-plugin</packaging>
 
    <dependencies>
       <dependency>
          <groupId>com.eduix.crowd</groupId>
          <artifactId>shibboleth-filter-config</artifactId>
-         <version>1.1.1</version>
+         <version>1.1.2</version>
          <scope>compile</scope>
       </dependency>
       <!-- Module dependencies -->
@@ -70,13 +70,13 @@
       <dependency>
          <groupId>junit</groupId>
          <artifactId>junit</artifactId>
-         <version>4.6</version>
+         <version>4.13</version>
          <scope>test</scope>
       </dependency>
       <dependency>
          <groupId>javax.servlet</groupId>
          <artifactId>servlet-api</artifactId>
-         <version>2.4</version>
+         <version>2.5</version>
          <scope>provided</scope>
       </dependency>
    </dependencies>
@@ -86,7 +86,7 @@
          <plugin>
             <groupId>com.atlassian.maven.plugins</groupId>
             <artifactId>maven-crowd-plugin</artifactId>
-            <version>5.1.2</version>
+            <version>6.3.21</version>
             <extensions>true</extensions>
             <configuration>
                <productVersion>${crowd.version}</productVersion>
@@ -109,18 +109,18 @@
          </plugin>
          <plugin>
             <artifactId>maven-compiler-plugin</artifactId>
-            <version>3.1</version>
+            <version>3.8.1</version>
             <configuration>
-               <source>1.5</source>
-               <target>1.5</target>
+               <source>1.8</source>
+               <target>1.8</target>
             </configuration>
          </plugin>
       </plugins>
    </build>
 
    <properties>
-      <crowd.version>3.2.0</crowd.version>
-      <crowd.data.version>2.0.4</crowd.data.version>
+      <crowd.version>3.7.0</crowd.version>
+      <crowd.data.version>3.7.0</crowd.data.version>
    </properties>
 
 </project>

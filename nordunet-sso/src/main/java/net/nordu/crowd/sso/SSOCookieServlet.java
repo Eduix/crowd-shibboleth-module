@@ -266,6 +266,7 @@ public class SSOCookieServlet extends NORDUnetHtmlServlet {
 
    // TODO A real error page
    private void errorPage(HttpServletResponse res, String error) throws IOException {
+	  res.setContentType("text/html;charset=UTF-8");
       PrintWriter writer = res.getWriter();
       if (error != null) {
          writeHtmlStart(writer, "Error setting SSO cookie", Collections.singletonList(error));
