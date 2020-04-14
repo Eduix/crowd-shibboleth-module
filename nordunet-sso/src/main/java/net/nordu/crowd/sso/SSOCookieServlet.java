@@ -138,6 +138,7 @@ public class SSOCookieServlet extends NORDUnetHtmlServlet {
       }
 
       if (requestedApplicationName == null) {
+    	 res.setContentType("text/html;charset=UTF-8");
          res.setStatus(HttpServletResponse.SC_FORBIDDEN);
          String error;
          try {
@@ -277,6 +278,7 @@ public class SSOCookieServlet extends NORDUnetHtmlServlet {
    }
 
    private void accessDeniedPage(HttpServletResponse res) throws IOException {
+	  res.setContentType("text/html;charset=UTF-8");
       res.sendError(HttpServletResponse.SC_UNAUTHORIZED, "You do not have access to the application");
    }
 
