@@ -100,6 +100,7 @@ public class ConfigurationLoader {
             }
 
             config.setLatin1ToUTF8(Boolean.parseBoolean(props.getProperty(Constants.LATIN1_TO_UTF8, "true")));
+            config.setHeadersUrldecode(Boolean.parseBoolean(props.getProperty(Constants.HEADERS_URLDECODE, "false")));
 
             config.setFirstNameHeader(props.getProperty(Constants.HEADER_FIRST_NAME, "givenName"));
             config.setLastNameHeader(props.getProperty(Constants.HEADER_LAST_NAME, "sn"));

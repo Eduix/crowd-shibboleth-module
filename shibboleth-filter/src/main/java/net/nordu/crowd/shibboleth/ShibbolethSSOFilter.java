@@ -12,6 +12,48 @@
  */
 package net.nordu.crowd.shibboleth;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.util.Arrays;
+import java.util.Enumeration;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
+
+import javax.servlet.FilterChain;
+import javax.servlet.ServletException;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.apache.commons.httpclient.HttpClient;
+import org.apache.commons.httpclient.HttpException;
+import org.apache.commons.httpclient.HttpStatus;
+import org.apache.commons.httpclient.NameValuePair;
+import org.apache.commons.httpclient.methods.GetMethod;
+import org.apache.commons.httpclient.params.HttpMethodParams;
+import org.apache.commons.lang.StringUtils;
+import org.bouncycastle.util.encoders.Base64;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.security.authentication.AbstractAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.authentication.AbstractAuthenticationProcessingFilter;
+import org.springframework.security.web.savedrequest.DefaultSavedRequest;
+import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
+
 import com.atlassian.crowd.embedded.api.Directory;
 import com.atlassian.crowd.embedded.api.PasswordCredential;
 import com.atlassian.crowd.embedded.impl.IdentifierUtils;
@@ -59,46 +101,11 @@ import com.atlassian.crowd.search.query.entity.restriction.NullRestrictionImpl;
 import com.atlassian.crowd.search.query.membership.MembershipQuery;
 import com.atlassian.crowd.service.client.ClientProperties;
 import com.atlassian.crowd.user.UserAuthoritiesProvider;
-import java.io.File;
-import java.io.IOException;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
-import java.util.Arrays;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
-import javax.servlet.FilterChain;
-import javax.servlet.ServletException;
-import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpServletResponse;
+
 import net.nordu.crowd.shibboleth.config.Configuration;
 import net.nordu.crowd.shibboleth.config.ConfigurationLoader;
 import net.nordu.crowd.shibboleth.config.GroupMapper;
 import net.nordu.crowd.shibboleth.config.UsernameUtil;
-import org.apache.commons.httpclient.HttpClient;
-import org.apache.commons.httpclient.HttpException;
-import org.apache.commons.httpclient.HttpStatus;
-import org.apache.commons.httpclient.NameValuePair;
-import org.apache.commons.httpclient.methods.GetMethod;
-import org.apache.commons.httpclient.params.HttpMethodParams;
-import org.apache.commons.lang.StringUtils;
-import org.bouncycastle.util.encoders.Base64;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.security.authentication.AbstractAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.AuthenticationException;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.web.authentication.AbstractAuthenticationProcessingFilter;
-import org.springframework.security.web.savedrequest.DefaultSavedRequest;
-import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
 
 /**
  * Login filter which relies on headers sent by Shibboleth for user information
@@ -151,6 +158,9 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
          }
       }
       String remoteUser = request.getHeader("REMOTE_USER");
+      if (config.isHeadersUrldecode()) {
+         remoteUser = urlDecode(remoteUser);
+      }
       String username = UsernameUtil.getFinalUsername(remoteUser, config);
       // If the username is not the same as the REMOTE_USER header the user
       // belongs to the home organizations and should be found in LDAP -
@@ -190,7 +200,11 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
          String lastName = request.getHeader(config.getLastNameHeader());
          String email = request.getHeader(config.getEmailHeader());
 
-         if (config.isLatin1ToUTF8()) {
+         if (config.isHeadersUrldecode()) {
+            firstName = urlDecode(firstName);
+            lastName = urlDecode(lastName);
+            email = urlDecode(email);
+         } else if (config.isLatin1ToUTF8()) {
             firstName = StringUtil.latin1ToUTF8(firstName);
             lastName = StringUtil.latin1ToUTF8(lastName);
          }
@@ -303,7 +317,11 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
          }
       }
       log.debug("Checking if authentication is required");
-      String username = UsernameUtil.getFinalUsername(request.getHeader("REMOTE_USER"), config);
+      String remoteUser = request.getHeader("REMOTE_USER");
+      if (config.isHeadersUrldecode()) {
+         remoteUser = urlDecode(remoteUser);
+      }
+      String username = UsernameUtil.getFinalUsername(remoteUser, config);
       Authentication auth = SecurityContextHolder.getContext().getAuthentication();
       if (auth != null && !IdentifierUtils.equalsInLowerCase(((CrowdUserDetails) auth.getPrincipal()).getUsername(), username) && !StringUtils.isBlank(username)) {
          log.debug("User is authenticated but the username from authentication does "
@@ -318,7 +336,7 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
          return !StringUtils.isBlank(username);
       } else if (auth == null || !auth.isAuthenticated()) {
          // If the user is not authenticated and REMOTE_USER is set authentication is required
-         log.debug("User is not authenticated. REMOTE_USER: {} - username: {}", request.getHeader("REMOTE_USER"), username);
+         log.debug("User is not authenticated. REMOTE_USER: {} - username: {}", remoteUser, username);
          return !StringUtils.isBlank(username);
       } else {
          log.debug("User already authenticated");
@@ -434,8 +452,11 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
          String lastName = request.getHeader(config.getLastNameHeader());
          String email = request.getHeader(config.getEmailHeader());
 
-         // Convert first name and last name from latin1 to utf8
-         if (config.isLatin1ToUTF8()) {
+         if (config.isHeadersUrldecode()) {
+            firstName = urlDecode(firstName);
+            lastName = urlDecode(lastName);
+            email = urlDecode(email);
+         } else if (config.isLatin1ToUTF8()) {
             firstName = StringUtil.latin1ToUTF8(firstName);
             lastName = StringUtil.latin1ToUTF8(lastName);
          }
@@ -516,6 +537,9 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
       // Get dynamic groups            
       if (config.getDynamicGroupHeader() != null) {
          String dynamicGroupNameString = request.getHeader(config.getDynamicGroupHeader());
+         if (config.isHeadersUrldecode()) {
+            dynamicGroupNameString = urlDecode(dynamicGroupNameString);
+         }
          String[] dynamicGroupNames = StringUtils.split(dynamicGroupNameString, config.getDynamicGroupDelimiter());
          if (dynamicGroupNames != null) {
             for (String dynamicGroupName : dynamicGroupNames) {
@@ -687,5 +711,16 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
     */
    public void setRequestToApplicationMapper(RequestToApplicationMapper requestToApplicationMapper) {
       this.requestToApplicationMapper = requestToApplicationMapper;
+   }
+   
+   private String urlDecode(String s) {
+      if (s != null) {
+         try {
+            return URLDecoder.decode(s, "UTF-8");
+         } catch (UnsupportedEncodingException e) {
+            log.warn("Error decoding", e);
+         }
+      }
+      return s;
    }
 }
