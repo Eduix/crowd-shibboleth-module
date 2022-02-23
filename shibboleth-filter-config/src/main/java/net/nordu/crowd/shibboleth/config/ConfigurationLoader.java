@@ -24,7 +24,8 @@ import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
 import org.apache.commons.lang.StringUtils;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Class for loading filter configuration
@@ -34,7 +35,7 @@ import org.apache.log4j.Logger;
  */
 public class ConfigurationLoader {
 
-    private static final Logger log = Logger.getLogger(ConfigurationLoader.class);
+    private static final Logger log = LoggerFactory.getLogger(ConfigurationLoader.class);
 
     public static Configuration loadConfiguration() {
         Configuration config = new Configuration();
