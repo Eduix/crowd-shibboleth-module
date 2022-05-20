@@ -37,8 +37,10 @@ import com.atlassian.crowd.model.user.User;
 import com.atlassian.plugin.webresource.WebResourceManager;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URLDecoder;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
@@ -92,7 +94,11 @@ public class SSOCookieServlet extends NORDUnetHtmlServlet {
       String requestedApplicationName = null;
       String originalRequestUrl = req.getParameter("redirectTo");
       UserAuthenticationContext authCtx = new UserAuthenticationContext();
-      String username = UsernameUtil.getFinalUsername(req.getHeader("REMOTE_USER"), config);
+      String remoteUser = req.getHeader("REMOTE_USER");
+      if (config.isHeadersUrldecode()) {
+         remoteUser = urlDecode(remoteUser);
+      }
+      String username = UsernameUtil.getFinalUsername(remoteUser, config);
       if (username == null) {
          username = req.getRemoteUser();
       }
@@ -294,5 +300,16 @@ public class SSOCookieServlet extends NORDUnetHtmlServlet {
    @Override
    public boolean requiresResources() {
       return true;
+   }
+   
+   private String urlDecode(String s) {
+      if (s != null) {
+         try {
+            return URLDecoder.decode(s, "UTF-8");
+         } catch (UnsupportedEncodingException e) {
+            log.warn("Error decoding", e);
+         }
+      }
+      return s;
    }
 }

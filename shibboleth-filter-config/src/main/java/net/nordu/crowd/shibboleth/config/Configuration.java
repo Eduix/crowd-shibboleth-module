@@ -36,6 +36,7 @@ public class Configuration {
    private long configFileLastChecked;
    private String directoryName;
    private boolean latin1ToUTF8;
+   private boolean headersUrldecode;
    private String firstNameHeader;
    private String lastNameHeader;
    private String emailHeader;
@@ -162,6 +163,14 @@ public class Configuration {
 
    public void setLatin1ToUTF8(boolean latin1ToUTF8) {
       this.latin1ToUTF8 = latin1ToUTF8;
+   }
+
+   public boolean isHeadersUrldecode() {
+      return headersUrldecode;
+   }
+
+   public void setHeadersUrldecode(boolean headersUrldecode) {
+      this.headersUrldecode = headersUrldecode;
    }
 
    public void setApplicationMap(Map<String, String> applicationMap) {

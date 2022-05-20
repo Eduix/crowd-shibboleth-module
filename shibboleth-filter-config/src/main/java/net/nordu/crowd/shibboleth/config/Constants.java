@@ -35,6 +35,7 @@ interface Constants {
     public static final String RELOAD_CONFIG_INTERVAL = "reload.config.interval";
     public static final String DIRECTORY_NAME = "directory.name";
     public static final String LATIN1_TO_UTF8 = "headers.latin1toutf8";
+    public static final String HEADERS_URLDECODE = "headers.urldecode";
     public static final String HEADER_FIRST_NAME = "headers.firstname";
     public static final String HEADER_LAST_NAME = "headers.lastname";
     public static final String HEADER_MAIL = "headers.mail";
