@@ -12,20 +12,26 @@
  */
 package net.nordu.crowd.shibboleth.config;
 
-import com.atlassian.plugin.util.ClassLoaderUtils;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+
 import org.apache.commons.lang.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.atlassian.plugin.util.ClassLoaderUtils;
 
 /**
  * Class for loading filter configuration
@@ -35,17 +41,35 @@ import org.slf4j.LoggerFactory;
  */
 public class ConfigurationLoader {
 
-    private static final Logger log = LoggerFactory.getLogger(ConfigurationLoader.class);
+   private static final Logger log = LoggerFactory.getLogger(ConfigurationLoader.class);
 
-    public static Configuration loadConfiguration() {
+   public static Configuration loadConfiguration() {
         Configuration config = new Configuration();
         try {
             Map<String, GroupMapper> mappings = new HashMap<String, GroupMapper>();
             Set<String> attributes = new HashSet<String>();
             Set<String> groupsToPurge = new HashSet<String>();
-            InputStream propsIn = ClassLoaderUtils.getResourceAsStream(Constants.CONFIG_FILE, ConfigurationLoader.class);
+            
+            String configFilePath = System.getenv(Constants.CONFIG_FILE_ENV_NAME);
+            InputStream propsIn = null;
+            if (configFilePath != null) {
+               try {
+                  File configFile = Paths.get(new URI(configFilePath)).toFile();
+                  propsIn = new FileInputStream(configFile);
+               } catch (URISyntaxException | IOException e) {
+                  throw new RuntimeException("Error loading configuration properties from file " + configFilePath, e);
+               }
+            }
             if (propsIn == null) {
-                throw new RuntimeException("Error loading configuration properties. Configuration file not found (\"" + Constants.CONFIG_FILE + "\")");
+               propsIn = ClassLoaderUtils.getResourceAsStream(Constants.CONFIG_FILE, ConfigurationLoader.class);
+               if (propsIn == null) {
+                  throw new RuntimeException("Error loading configuration properties. Configuration file not found (\""
+                           + Constants.CONFIG_FILE + "\")");
+               }
+               URL confFileURL = ClassLoaderUtils.getResource(Constants.CONFIG_FILE, ConfigurationLoader.class);
+               if (confFileURL != null && confFileURL.getProtocol().equals("file")) {
+                  configFilePath = confFileURL.getFile();
+               }
             }
             Properties props = new Properties();
 
@@ -61,13 +85,17 @@ public class ConfigurationLoader {
                 }
             }
             config.setConfigFileLastChecked(System.currentTimeMillis());
-            URL confFileURL = ClassLoaderUtils.getResource(Constants.CONFIG_FILE, ConfigurationLoader.class);
-            if (confFileURL != null && confFileURL.getProtocol().equals("file")) {
-                String confFile = confFileURL.getFile();
-                config.setConfigFile(confFile);
-                long configFileLastModified = new File(confFile).lastModified();
-                config.setConfigFileLastModified(configFileLastModified);
-            }
+            //URL confFileURL = ClassLoaderUtils.getResource(Constants.CONFIG_FILE, ConfigurationLoader.class);
+            //if (confFileURL != null && confFileURL.getProtocol().equals("file")) {
+            //    String confFile = confFileURL.getFile();
+               config.setConfigFile(configFilePath);
+               long configFileLastModified;
+               try {
+                  configFileLastModified = Paths.get(new URI(configFilePath)).toFile().lastModified();
+                  config.setConfigFileLastModified(configFileLastModified);
+               } catch (URISyntaxException e) {
+               }
+            //}
 
 
             // Load group mappings
@@ -93,6 +121,8 @@ public class ConfigurationLoader {
             config.setDynamicGroupHeader(props.getProperty(Constants.DYNAMIC_GROUP_HEADER));
             config.setDynamicGroupDelimiter(props.getProperty(Constants.DYNAMIC_GROUP_DELIMITER, ";"));
             config.setDynamicGroupPurgePrefix(props.getProperty(Constants.DYNAMIC_GROUP_PURGE_PREFIX));
+            
+            config.setCreateUser(Boolean.parseBoolean(props.getProperty(Constants.CREATE_USER, "true")));
             
             if (props.getProperty(Constants.DIRECTORY_NAME) != null) {
                 config.setDirectoryName(props.getProperty(Constants.DIRECTORY_NAME));
@@ -145,21 +175,36 @@ public class ConfigurationLoader {
         return config;
     }
 
-    private static void handleGroupMapperParts(String[] parts, Map<String, GroupMapper> mappers, String val) {
-        if (parts.length >= 3 && Constants.GROUP.equals(parts[0])) {
-            String group = parts[1];
-            GroupMapper filter = mappers.get(group);
-            if (filter == null) {
-                filter = new GroupMapper(group, new HashMap<String, String>());
-                mappers.put(group, filter);
-            }
-            if (Constants.GROUP_MAPPER_SENSITIVE.equals(parts[2])) {
-                filter.setCaseSensitive(Boolean.parseBoolean(val));
-            } else if (Constants.GROUP_MAPPER_EXCLUSIVE.equals(parts[2])) {
-                filter.setExclusive(Boolean.parseBoolean(val));
-            } else if (Constants.GROUP_MAPPER_MATCH.equals(parts[2]) && parts.length == 4) {
-                filter.getHeaderMatches().put(parts[3], val);
-            }
-        }
-    }
+   private static File getConfigFile() {
+      try {
+         String configFilePath = System.getenv(Constants.CONFIG_FILE_ENV_NAME);
+         if (configFilePath == null) {
+            return null;
+         }
+         File configFile = Paths.get(new URI(configFilePath)).toFile();
+         if (configFile.isFile()) {
+            return configFile;
+         }
+      } catch (URISyntaxException e) {
+      }
+      return null;
+   }
+
+   private static void handleGroupMapperParts(String[] parts, Map<String, GroupMapper> mappers, String val) {
+      if (parts.length >= 3 && Constants.GROUP.equals(parts[0])) {
+         String group = parts[1];
+         GroupMapper filter = mappers.get(group);
+         if (filter == null) {
+            filter = new GroupMapper(group, new HashMap<String, String>());
+            mappers.put(group, filter);
+         }
+         if (Constants.GROUP_MAPPER_SENSITIVE.equals(parts[2])) {
+            filter.setCaseSensitive(Boolean.parseBoolean(val));
+         } else if (Constants.GROUP_MAPPER_EXCLUSIVE.equals(parts[2])) {
+            filter.setExclusive(Boolean.parseBoolean(val));
+         } else if (Constants.GROUP_MAPPER_MATCH.equals(parts[2]) && parts.length == 4) {
+            filter.getHeaderMatches().put(parts[3], val);
+         }
+      }
+   }
 }

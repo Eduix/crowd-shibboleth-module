@@ -15,8 +15,10 @@ package net.nordu.crowd.shibboleth;
 import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
+import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
@@ -157,6 +159,8 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
             log.trace(h + " - " + request.getHeader(h));
          }
       }
+      this.checkReloadConfig();
+      
       String remoteUser = request.getHeader("REMOTE_USER");
       if (config.isHeadersUrldecode()) {
          remoteUser = urlDecode(remoteUser);
@@ -195,6 +199,10 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
       }
 
       if (userDetails == null) {
+         if (!config.isCreateUser()) {
+            log.warn("Tried to create a new user {}", remoteUser);
+            return null;
+         }
          log.debug("No user {} found. Creating", username);
          String firstName = request.getHeader(config.getFirstNameHeader());
          String lastName = request.getHeader(config.getLastNameHeader());
@@ -658,8 +666,14 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
          if (System.currentTimeMillis() < config.getConfigFileLastChecked() + config.getReloadConfigInterval()) {
             return;
          }
-
-         long configFileLastModified = new File(config.getConfigFile()).lastModified();
+         
+         long configFileLastModified = 0;
+         try {
+            configFileLastModified = Paths.get(new URI(config.getConfigFile())).toFile().lastModified();
+         } catch (URISyntaxException e) {
+         }
+         
+         log.debug("Checking config file {}, {} <> {} ", config.getConfigFile(), config.getConfigFileLastModified(), configFileLastModified);
 
          if (configFileLastModified != config.getConfigFileLastModified()) {
             log.debug("Config file has been changed, reloading");
