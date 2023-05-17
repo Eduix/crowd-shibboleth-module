@@ -91,6 +91,7 @@ public class SSOCookieServlet extends NORDUnetHtmlServlet {
 
    @Override
    protected void doGet(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
+      log.trace("Creating SSO cookie {}", req.getContextPath());
       String requestedApplicationName = null;
       String originalRequestUrl = req.getParameter("redirectTo");
       UserAuthenticationContext authCtx = new UserAuthenticationContext();

@@ -268,8 +268,10 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
          SecurityContextHolder.getContext().setAuthentication(newAuth);
       } catch (InvalidAuthenticationException | InactiveAccountException | ApplicationAccessDeniedException | OperationFailedException | ObjectNotFoundException | InvalidTokenException e) {
          log.error("Error authenticating user", e);
+         return null;
       } catch (NullPointerException e) {
          log.error(e.getMessage(), e);
+         return null;
       }
 
       if (newUser || (!homeOrgUser && config.isSyncEveryLogin() && groupsChanged)) {
@@ -324,6 +326,7 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
             log.trace(h + " - " + request.getHeader(h));
          }
       }
+      this.checkReloadConfig();
       log.debug("Checking if authentication is required");
       String remoteUser = request.getHeader("REMOTE_USER");
       if (config.isHeadersUrldecode()) {
@@ -345,11 +348,24 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
       } else if (auth == null || !auth.isAuthenticated()) {
          // If the user is not authenticated and REMOTE_USER is set authentication is required
          log.debug("User is not authenticated. REMOTE_USER: {} - username: {}", remoteUser, username);
-         return !StringUtils.isBlank(username);
+         //return !StringUtils.isBlank(username);
+         return this.userRequiresAuthentication(username);
       } else {
          log.debug("User already authenticated");
       }
       return false;
+   }
+   
+   private boolean userRequiresAuthentication(String username) {
+      if (StringUtils.isBlank(username)) {
+         return false;
+      }
+      try {
+         CrowdUserDetails userDetails = loadUserByUsername(username);
+         return userDetails.isEnabled();
+      } catch (UserNotFoundException | ApplicationNotFoundException e) {
+         return config.isCreateUser();
+      }
    }
 
    private boolean createUser(String username, String firstname, String lastname, String email, String password, Map<String, Set<String>> attributes) {
