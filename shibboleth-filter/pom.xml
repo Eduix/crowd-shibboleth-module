@@ -14,7 +14,7 @@
         <url>http://www.eduix.fi/</url>
     </organization>
 
-    <name>Crowd Shibboleth filter for Crowd 4.4.0+</name>
+    <name>Crowd Shibboleth filter for Crowd 5.1.0+</name>
     <description>Crowd Shibboleth filter</description>
     <packaging>atlassian-plugin</packaging>
 
@@ -69,6 +69,13 @@
         </dependency>
 
         <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
+            <version>4.5.13</version>
+            <scope>provided</scope>
+        </dependency>
+
+        <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <version>4.13.1</version>
@@ -106,8 +113,8 @@
     </build>
 
     <properties>
-        <crowd.version>4.4.0</crowd.version>
-        <crowd.data.version>4.4.0</crowd.data.version>
+        <crowd.version>5.1.0</crowd.version>
+        <crowd.data.version>5.1.0</crowd.data.version>
     </properties>
 
 </project>

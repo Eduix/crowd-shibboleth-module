@@ -12,16 +12,17 @@
  */
 package net.nordu.crowd.shibboleth;
 
-import java.io.File;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -36,13 +37,16 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.apache.commons.httpclient.HttpClient;
-import org.apache.commons.httpclient.HttpException;
-import org.apache.commons.httpclient.HttpStatus;
-import org.apache.commons.httpclient.NameValuePair;
-import org.apache.commons.httpclient.methods.GetMethod;
-import org.apache.commons.httpclient.params.HttpMethodParams;
 import org.apache.commons.lang.StringUtils;
+import org.apache.http.HttpException;
+import org.apache.http.HttpResponse;
+import org.apache.http.HttpStatus;
+import org.apache.http.NameValuePair;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.utils.URLEncodedUtils;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.message.BasicNameValuePair;
 import org.bouncycastle.util.encoders.Base64;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -113,6 +117,7 @@ import net.nordu.crowd.shibboleth.config.UsernameUtil;
  * Login filter which relies on headers sent by Shibboleth for user information
  *
  * @author Juha-Matti Leppälä <juha@eduix.fi>
+ * @author Jarkko Leponiemi <jarkko.leponiemi@eduix.fi>
  * @version $Id$
  */
 public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter {
@@ -277,24 +282,21 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
       if (newUser || (!homeOrgUser && config.isSyncEveryLogin() && groupsChanged)) {
          // Sync users to all necessary applications         
          if (config.syncRequired()) {
-            HttpClient client = new HttpClient();
+            HttpClient client = HttpClients.createDefault();
             // TODO: sync users only to applications they need to be synced to
             // (get their application list and fetch the urls for that list)
             log.info("Syncing user {} to all applications", username);
+            List<NameValuePair> params = new ArrayList<>();
+            params.add(new BasicNameValuePair("username", username));
+            params.add(new BasicNameValuePair("password", newUserPassword));
+            String paramString = URLEncodedUtils.format(params, StandardCharsets.UTF_8);
             for (String url : config.getAllUrls()) {
-               GetMethod get = new GetMethod(url);
-               get.setQueryString(new NameValuePair[]{
-                  new NameValuePair("username", username),
-                  new NameValuePair("password", newUserPassword)
-               });
-               get.getParams().setParameter(HttpMethodParams.SO_TIMEOUT, 5000);
+               HttpGet get = new HttpGet(url + "?" + paramString);
                try {
-                  int statusCode = client.executeMethod(get);
-                  if (statusCode != HttpStatus.SC_OK) {
+                  HttpResponse httpResponse = client.execute(get);
+                  if (httpResponse.getStatusLine().getStatusCode() != HttpStatus.SC_OK) {
                      log.warn("Could not sync user {} using url {}", username, url);
                   }
-               } catch (HttpException e) {
-                  log.error("Fatal protocol violation. Could not sync user {} using url {}", username, url, e);
                } catch (IOException e) {
                   log.error("Fatal transport error Could not sync user {} using url {}", username, url, e);
                } finally {
