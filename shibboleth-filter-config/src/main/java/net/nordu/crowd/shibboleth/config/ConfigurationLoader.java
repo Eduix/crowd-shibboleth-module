@@ -169,6 +169,8 @@ public class ConfigurationLoader {
                config.setAttributeHeaders(Collections.EMPTY_SET);
             }
 
+            config.setEnableUserAccounts(Boolean.parseBoolean(props.getProperty(Constants.ENABLE_USER_ACCOUNTS, "false")));
+
         } catch (IOException ex) {
             log.error("Error loading configuration properties", ex);
         }

@@ -362,7 +362,8 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
       }
       try {
          CrowdUserDetails userDetails = loadUserByUsername(username);
-         return userDetails.isEnabled();
+
+         return config.isEnableUserAccounts() | userDetails.isEnabled();
       } catch (UserNotFoundException | ApplicationNotFoundException e) {
          return config.isCreateUser();
       }
@@ -490,6 +491,9 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
          mutableUser.setFirstName(firstName);
          mutableUser.setLastName(lastName);
          mutableUser.setDisplayName(firstName + " " + lastName);
+         if (config.isEnableUserAccounts()) {
+            mutableUser.setActive(true);
+         }
          directoryManager.updateUser(directory.getId(), mutableUser);
          Map<String, Set<String>> attributesFromHeaders = getUserAttributesFromHeaders(request);
          if (!attributesFromHeaders.isEmpty()) {
