@@ -111,16 +111,23 @@ public class SSOCookieServlet extends NORDUnetHtmlServlet {
 
       List<Application> applications = null;
       boolean hasEmailAddress = false;
+      boolean userOk = false;
       try {
          final User user = applicationService.findUserByName(applicationManager.findByName("crowd"), username);
          applications = tokenAuthenticationManager.findAuthorisedApplications(user, "crowd");
          hasEmailAddress = !StringUtils.isBlank(user.getEmailAddress());
+         userOk = true;
       } catch (ObjectNotFoundException e) {
          log.error("Could not find user", e);
       } catch (DirectoryNotFoundException e) {
          log.error("Could not find directory", e);
       } catch (OperationFailedException e) {
          log.error("Could not find the user or his authorised applications", e);
+      }
+
+      if (!userOk) {
+         userErrorPage(res);
+         return;
       }
 
       URL reqURL = null;
@@ -177,7 +184,7 @@ public class SSOCookieServlet extends NORDUnetHtmlServlet {
          return;
       } catch (InactiveAccountException e) {
          log.error("Account is inactive: {}", e.getMessage());
-         errorPage(res, e.getMessage());
+         userErrorPage(res);
          return;
       } catch (ObjectNotFoundException e) {
          log.error("Object not found: {}", e.getMessage());
@@ -270,6 +277,13 @@ public class SSOCookieServlet extends NORDUnetHtmlServlet {
       tokenCookie.setSecure(propertyManager.getCookieConfiguration().isSecure());
 
       return tokenCookie;
+   }
+
+   private void userErrorPage(HttpServletResponse res) throws IOException {
+      res.setContentType("text/html;charset=UTF-8");
+      res.setStatus(HttpServletResponse.SC_FORBIDDEN);
+      PrintWriter writer = res.getWriter();
+      writeHtmlWithFragment(writer, "No permission to access service", "usermessage.html", "<p>Your have no permission to access the service!</p>");
    }
 
    // TODO A real error page
