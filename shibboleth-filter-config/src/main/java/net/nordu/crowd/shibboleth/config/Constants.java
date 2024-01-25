@@ -46,4 +46,5 @@ interface Constants {
     public static final String HOME_ORGANIZATIONS = "home.organizations";
     public static final String ATTRIBUTE_HEADERS = "headers.to.attributes";
     public static final String ENABLE_USER_ACCOUNTS = "enable.user.accounts";
+    public static final String CREATE_USERS_DISABLED = "create.users.disabled";
 }

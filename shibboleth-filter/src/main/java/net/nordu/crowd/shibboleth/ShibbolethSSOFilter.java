@@ -349,14 +349,14 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
          // If the user is not authenticated and REMOTE_USER is set authentication is required
          log.debug("User is not authenticated. REMOTE_USER: {} - username: {}", remoteUser, username);
          //return !StringUtils.isBlank(username);
-         return this.userRequiresAuthentication(username);
+         return this.userRequiresAuthentication(username, request);
       } else {
          log.debug("User already authenticated");
       }
       return false;
    }
    
-   private boolean userRequiresAuthentication(String username) {
+   private boolean userRequiresAuthentication(String username, final HttpServletRequest request) {
       if (StringUtils.isBlank(username)) {
          return false;
       }
@@ -365,8 +365,29 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
 
          return config.isEnableUserAccounts() | userDetails.isEnabled();
       } catch (UserNotFoundException | ApplicationNotFoundException e) {
-         return config.isCreateUser();
       }
+      if (config.isCreateUser() && config.isCreateUsersDisabled()) {
+         createUser(username, request);
+         return false;
+      }
+      return config.isCreateUser();
+   }
+
+   private boolean createUser(String username, final HttpServletRequest request) {
+      String firstName = request.getHeader(config.getFirstNameHeader());
+      String lastName = request.getHeader(config.getLastNameHeader());
+      String email = request.getHeader(config.getEmailHeader());
+
+      if (config.isHeadersUrldecode()) {
+         firstName = urlDecode(firstName);
+         lastName = urlDecode(lastName);
+         email = urlDecode(email);
+      } else if (config.isLatin1ToUTF8()) {
+         firstName = StringUtil.latin1ToUTF8(firstName);
+         lastName = StringUtil.latin1ToUTF8(lastName);
+      }
+      String newUserPassword = randomPassword();
+      return createUser(username, firstName, lastName, email, newUserPassword, getUserAttributesFromHeaders(request));
    }
 
    private boolean createUser(String username, String firstname, String lastname, String email, String password, Map<String, Set<String>> attributes) {
@@ -378,12 +399,12 @@ public class ShibbolethSSOFilter extends AbstractAuthenticationProcessingFilter 
          template.setLastName(lastname);
          template.setEmailAddress(email);
          template.setDisplayName(firstname + " " + lastname);
-         template.setActive(Boolean.TRUE);
+         template.setActive(!config.isCreateUsersDisabled());
          directoryManager.addUser(directory.getId(), template, new PasswordCredential(password, false));
          if (!attributes.isEmpty()) {
             directoryManager.storeUserAttributes(directory.getId(), username, attributes);
          }
-         return true;
+         return !config.isCreateUsersDisabled();
       } catch (DirectoryNotFoundException | DirectoryPermissionException | InvalidCredentialException | InvalidUserException | OperationFailedException | UserAlreadyExistsException e) {
          log.error("Error creating new user", e);
       } catch (UserNotFoundException e) {
