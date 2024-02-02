@@ -44,7 +44,10 @@ public class Configuration {
    private Set<String> homeOrganizations;
    private Map<String, String> applicationMap;   
    private boolean syncEveryLogin;
-   private Set<String> attributeHeaders;   
+   private Set<String> attributeHeaders;
+
+   private boolean enableUserAccounts;
+   private boolean createUsersDisabled;
 
    public String getEmailHeader() {
       return emailHeader;
@@ -212,6 +215,22 @@ public class Configuration {
 
    public void setSyncEveryLogin(boolean syncEveryLogin) {
       this.syncEveryLogin = syncEveryLogin;
+   }
+
+   public boolean isEnableUserAccounts() {
+      return enableUserAccounts;
+   }
+
+   public void setEnableUserAccounts(boolean enableUserAccounts) {
+      this.enableUserAccounts = enableUserAccounts;
+   }
+
+   public boolean isCreateUsersDisabled() {
+      return createUsersDisabled;
+   }
+
+   public void setCreateUsersDisabled(boolean createUsersDisabled) {
+      this.createUsersDisabled = createUsersDisabled;
    }
 
    public static Configuration newInstanceFromFile() {

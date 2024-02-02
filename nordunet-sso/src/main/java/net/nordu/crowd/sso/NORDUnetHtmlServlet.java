@@ -61,6 +61,7 @@ public abstract class NORDUnetHtmlServlet extends HttpServlet {
 
    private String getHtmlFragment(String fragmentName) {
       File fragmentFile = new File(homeLocator.getHomePath() + File.separatorChar + "ssoservlet" + File.separatorChar + fragmentName);
+      log.debug("Getting fragment {}", fragmentFile.getAbsolutePath());
       if (fragmentFile.exists() && fragmentFile.canRead()) {
          try {
             return FileUtils.readFileToString(fragmentFile);
@@ -73,6 +74,7 @@ public abstract class NORDUnetHtmlServlet extends HttpServlet {
 
    private List<String> getThemeResources() {
       File themeResourcesFile = new File(homeLocator.getHomePath() + File.separatorChar + "ssoservlet" + File.separatorChar + THEME_RESOURCES);
+      log.debug("Get theme resource {}", themeResourcesFile.getAbsolutePath());
       if (themeResourcesFile.exists() && themeResourcesFile.canRead()) {
          try {
             return FileUtils.readLines(themeResourcesFile);
@@ -87,6 +89,17 @@ public abstract class NORDUnetHtmlServlet extends HttpServlet {
    protected void writeHtml(PrintWriter writer, String title, String content) {
       writeHtmlStart(writer, title, null);
       writer.write(content);
+      writeHtmlEnd(writer);
+   }
+
+   protected void writeHtmlWithFragment(PrintWriter writer, String title, String fragmentName, String defaultText) {
+      writeHtmlStart(writer, title, null);
+      String fragment = getHtmlFragment(fragmentName);
+      if (fragment != null) {
+         writer.write(fragment);
+      } else {
+         writer.write(defaultText);
+      }
       writeHtmlEnd(writer);
    }
 
