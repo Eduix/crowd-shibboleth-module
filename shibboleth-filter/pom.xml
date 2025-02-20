@@ -7,7 +7,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.eduix.crowd</groupId>
     <artifactId>shibboleth-filter</artifactId>
-    <version>1.1.4</version>
+    <version>1.1.5</version>
 
     <organization>
         <name>Eduix</name>
@@ -22,7 +22,7 @@
         <dependency>
             <groupId>com.eduix.crowd</groupId>
             <artifactId>shibboleth-filter-config</artifactId>
-            <version>1.1.4</version>
+            <version>1.1.5</version>
             <scope>compile</scope>
         </dependency>
             <!-- Module dependencies -->
